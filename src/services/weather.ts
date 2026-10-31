@@ -1,7 +1,14 @@
 import "server-only";
 import type { DailyForecast, WeatherForecast } from "@/domain/weather";
 
-const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
+/**
+ * Open-Meteo's free endpoint is for non-commercial use. For commercial use set
+ * OPEN_METEO_API_KEY (server-only) to switch to the customer endpoint.
+ */
+const API_KEY = process.env.OPEN_METEO_API_KEY ?? "";
+const ENDPOINT = API_KEY
+  ? "https://customer-api.open-meteo.com/v1/forecast"
+  : "https://api.open-meteo.com/v1/forecast";
 export const FORECAST_DAYS = 7;
 
 interface OpenMeteoResponse {
@@ -41,6 +48,7 @@ export async function fetchForecast(lat: number, lon: number, timezone: string):
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max",
   });
+  if (API_KEY) params.set("apikey", API_KEY);
 
   let res: Response;
   try {
