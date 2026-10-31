@@ -160,7 +160,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const supabase = getBrowserSupabase();
     if (!supabase) {
-      enterLocal();
+      // Browser storage is only readable after hydration.
+      void Promise.resolve().then(enterLocal);
       return;
     }
     let active = true;

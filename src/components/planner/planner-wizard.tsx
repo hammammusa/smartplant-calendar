@@ -21,7 +21,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { CropArt } from "@/components/brand/crop-art";
@@ -98,7 +98,7 @@ export function PlannerWizard({ crops }: { crops: Crop[] }) {
     mode: "onTouched",
     defaultValues: { plantedOn: app.today, gardenName: "حديقتي", areaM2: "", quantity: "", notes: "" },
   });
-  const plantedOn = form.watch("plantedOn");
+  const plantedOn = useWatch({ control: form.control, name: "plantedOn" });
   const selectedCrops = useMemo(() => crops.filter((c) => selected.includes(c.slug)), [crops, selected]);
 
   const plans = useMemo(() => {
