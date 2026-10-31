@@ -1,0 +1,30 @@
+import type { Metadata } from "next";
+import { CropBrowser } from "@/components/crops/crop-browser";
+import { PageHeader } from "@/components/layout/page-header";
+import { Alert } from "@/components/ui/feedback";
+import { getCrops } from "@/services/crops";
+
+export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: "دليل المحاصيل الزراعية",
+  description: "دليل عربي للمحاصيل المنزلية في فلسطين وبلاد الشام: مواعيد الزراعة حسب المنطقة، واحتياجات الشمس والري، ومدة النمو، والمشكلات الشائعة.",
+  alternates: { canonical: "/crops" },
+};
+
+export default async function CropsPage() {
+  const { crops } = await getCrops();
+  return (
+    <div className="container-page flex flex-col gap-8 py-10 sm:py-14">
+      <PageHeader
+        eyebrow="دليل المحاصيل"
+        title="ماذا تريد أن تزرع؟"
+        description="ابحث في المحاصيل وصفِّها حسب الموسم والمنطقة ونوع المساحة ومستوى الصعوبة، ثم افتح أي محصول لمعرفة طريقة زراعته والعناية به."
+      />
+      <Alert tone="info" title="عن دقة المعلومات">
+        البيانات الحالية أولية وعامة لبلاد الشام، ونوضح ذلك في كل محصول. تختلف النتائج حسب الصنف والتربة والارتفاع، لذا استعن بالإرشاد الزراعي في منطقتك عند الحاجة.
+      </Alert>
+      <CropBrowser crops={crops} />
+    </div>
+  );
+}

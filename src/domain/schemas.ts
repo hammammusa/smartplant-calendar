@@ -37,6 +37,8 @@ export const planRequestSchema = z.object({
   zone: z.enum(CLIMATE_ZONES, { error: "اختر المنطقة المناخية" }),
   spaceType: z.enum(SPACE_TYPES, { error: "اختر نوع المساحة" }),
   regionId: z.string().max(80).nullable(),
+  /** Reuse an existing garden (several crops in one plan). */
+  gardenId: z.string().max(80).nullable().optional(),
   gardenName: z
     .string({ error: "أدخل اسمًا للمساحة" })
     .trim()
