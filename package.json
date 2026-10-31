@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "db:seed:generate": "tsx scripts/generate-seed.ts"
+    "db:seed:generate": "tsx scripts/generate-seed.ts",
+    "test:db": "bash tests/db/run.sh"
   },
   "dependencies": {
     "@fontsource/cairo": "^5.3.0",
