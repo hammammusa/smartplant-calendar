@@ -125,7 +125,7 @@ export function DashboardView() {
         <Stat icon={CalendarDays} label="خلال 7 أيام" value={buckets.upcoming.length} tone="bg-[var(--task-fertilizing-soft)] text-[var(--task-fertilizing)]" href="/calendar" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">
           <section aria-labelledby="today-tasks" className="rounded-2xl border border-border bg-surface p-5 shadow-xs">
             <div className="mb-3 flex items-center justify-between">

@@ -34,7 +34,7 @@ export function filterCrops(crops: Crop[], filters: CropFilters): Crop[] {
   return crops.filter((crop) => {
     if (q) {
       const haystack = normalizeArabic(
-        [crop.name, ...(crop.otherNames ?? []), crop.scientificName ?? "", crop.summary].join(" "),
+        [crop.name, ...(crop.otherNames ?? []), crop.scientificName ?? ""].join(" "),
       );
       if (!haystack.includes(q)) return false;
     }

@@ -41,7 +41,7 @@ export function PlanPreview({ crops, defaultDate }: { crops: Crop[]; defaultDate
   if (!crop || !plan) return null;
 
   return (
-    <div className="grid gap-6 rounded-2xl border border-border bg-surface p-4 shadow-md sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <div className="grid grid-cols-1 gap-6 rounded-2xl border border-border bg-surface p-4 shadow-md sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div className="flex flex-col gap-4">
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
           <div className="flex flex-col gap-1.5">

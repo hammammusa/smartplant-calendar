@@ -66,7 +66,7 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="bg-grid-soft absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
-        <div className="container-page grid items-center gap-12 py-12 sm:py-16 lg:grid-cols-[1.05fr_1fr] lg:py-20">
+        <div className="container-page grid grid-cols-1 items-center gap-12 py-12 sm:py-16 lg:grid-cols-[1.05fr_1fr] lg:py-20">
           <div className="animate-rise space-y-6">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-surface px-3 py-1 text-sm font-semibold text-brand-700 shadow-xs">
               <Sprout className="size-4 text-lime-600" aria-hidden />

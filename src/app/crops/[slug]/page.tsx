@@ -69,7 +69,7 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
         </ol>
       </nav>
 
-      <header className="grid items-center gap-8 lg:grid-cols-[1.1fr_1fr]">
+      <header className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[1.1fr_1fr]">
         <div className="space-y-5">
           <div className="flex flex-wrap gap-2">
             <Badge>{CATEGORY_LABELS[crop.category]}</Badge>
@@ -115,7 +115,7 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
         ))}
       </section>
 
-      <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="space-y-12">
           <section id="windows" aria-labelledby="windows-title" className="scroll-mt-24">
             <h2 id="windows-title" className="mb-2 flex items-center gap-2 text-2xl font-extrabold">

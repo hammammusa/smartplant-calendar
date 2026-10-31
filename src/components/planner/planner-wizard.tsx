@@ -234,7 +234,7 @@ export function PlannerWizard({ crops }: { crops: Crop[] }) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
       {/* Stepper */}
       <nav aria-label="خطوات إنشاء الخطة">
         <ol className="flex gap-2 overflow-x-auto pb-1 scrollbar-none lg:sticky lg:top-24 lg:flex-col">

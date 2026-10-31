@@ -33,7 +33,7 @@ const GROUPS = [
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-border bg-surface pb-20 md:pb-0">
-      <div className="container-page grid gap-10 py-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+      <div className="container-page grid grid-cols-1 gap-10 py-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div className="space-y-4">
           <Logo />
           <p className="max-w-sm text-sm leading-7 text-muted-foreground">

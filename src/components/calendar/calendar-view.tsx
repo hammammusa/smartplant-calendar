@@ -248,7 +248,7 @@ export function CalendarView() {
           )}
         </section>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
           {view === "month" ? (
             <MonthGrid cursor={cursor} today={today} selected={selected} byDate={byDate} onSelect={setSelected} onOpen={setOpenTask} />
           ) : (
