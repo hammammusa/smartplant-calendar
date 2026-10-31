@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { getProfileAction, updateNotificationPrefsAction, updateProfileAction, type ProfileData } from "@/actions/user-data";
+import { getProfileAction, updateNotificationPrefsAction, updateProfileAction, type ProfileData } from "@/data-access/user-data";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

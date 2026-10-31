@@ -1,10 +1,14 @@
-"use server";
+"use client";
 
 /**
- * Server actions for signed-in users. Each action:
- *   1. re-validates input with Zod (never trusts the client),
+ * Data access for signed-in users, running in the browser (static export).
+ * Each call:
+ *   1. validates input with the shared Zod schemas,
  *   2. verifies the session with Supabase Auth,
- *   3. runs queries as the user so Row Level Security enforces ownership.
+ *   3. queries as the user with the public key, so PostgreSQL Row Level
+ *      Security — not the browser — decides what the user may read or change.
+ * Database CHECK constraints repeat the important limits, so bypassing this
+ * module (e.g. calling the REST API directly) cannot store invalid or foreign data.
  */
 import { z } from "zod";
 import { generatePlan } from "@/domain/plan-generator";
@@ -17,7 +21,7 @@ import {
   uuidSchema,
 } from "@/domain/schemas";
 import { PLANTING_STATUSES, type Task, type UserDataSnapshot } from "@/domain/types";
-import { getServerSupabase } from "@/lib/supabase/server";
+import { getBrowserSupabase } from "@/lib/supabase/client";
 import { CROP_SELECT, mapCropRow, type CropRow } from "@/services/crop-mapper";
 import {
   mapGarden,
@@ -29,13 +33,14 @@ import {
 } from "@/services/user-data-mapper";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
+export type ActionResultOf<T> = ActionResult<T>;
 
 const NOT_CONFIGURED = "قاعدة البيانات غير مهيأة بعد.";
 const NOT_SIGNED_IN = "انتهت جلستك. سجّل الدخول مرة أخرى.";
 const GENERIC = "حدث خطأ غير متوقع أثناء الحفظ. حاول مرة أخرى.";
 
 async function authed() {
-  const supabase = await getServerSupabase();
+  const supabase = getBrowserSupabase();
   if (!supabase) return { error: NOT_CONFIGURED } as const;
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return { error: NOT_SIGNED_IN } as const;
@@ -47,7 +52,8 @@ function firstIssue(err: z.ZodError): string {
 }
 
 function fail(scope: string, message: string): { ok: false; error: string } {
-  console.error(`[actions:${scope}]`, message);
+  console.error(`[data:${scope}]`, message);
+  if (/fetch|network/i.test(message)) return { ok: false, error: "تعذّر الاتصال بالخادم. تحقق من اتصالك بالإنترنت." };
   return { ok: false, error: GENERIC };
 }
 

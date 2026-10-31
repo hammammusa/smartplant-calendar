@@ -18,7 +18,12 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build
+      - name: Static export build (GitHub Pages paths)
+        run: npm run build:pages
+      - name: Check the export uses the /smartplant-calendar base path
+        run: |
+          test -f out/index.html && test -f out/404.html && test -f out/crops/tomato/index.html
+          grep -q '/smartplant-calendar/_next/static/' out/index.html
 
   database:
     runs-on: ubuntu-latest
@@ -43,5 +48,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run build
+      - run: npm run build:pages
+      # Serves out/ like GitHub Pages under /smartplant-calendar/ (scripts/serve-static.mjs).
       - run: npm run test:e2e

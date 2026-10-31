@@ -1,7 +1,8 @@
 /**
- * Public runtime configuration. Only NEXT_PUBLIC_* values are read here, so
- * this module is safe on both server and client. No secret keys are needed:
- * all database access goes through the user's session and Row Level Security.
+ * Public build-time configuration. Only NEXT_PUBLIC_* values exist here; they
+ * are embedded in the static bundle, so never put a secret in them. The
+ * Supabase publishable (anon) key is public by design — data is protected by
+ * Row Level Security in the database.
  */
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const SUPABASE_KEY =
@@ -9,8 +10,28 @@ export const SUPABASE_KEY =
 
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+/** Sub-path the site is served from ("" locally, "/smartplant-calendar" on GitHub Pages). */
+export const BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
+
+/** Full public URL of the site root, including the base path, without trailing slash. */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? `http://localhost:3000${BASE_PATH}`).replace(/\/$/, "");
 
 export const SITE_NAME = "رزنامة الزراعة الذكية";
 export const SITE_DESCRIPTION =
   "منصة عربية تساعدك على معرفة ماذا تزرع ومتى، وتنظّم الري والتسميد والحصاد في رزنامة واحدة وفق منطقتك وموسمك.";
+
+/** Absolute URL for SEO metadata (canonical, sitemap, Open Graph). */
+export function absoluteUrl(path = "/"): string {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${SITE_URL}${p === "/" ? "/" : p.endsWith("/") ? p : `${p}/`}`;
+}
+
+/**
+ * Browser URL for a route inside this site (for places Next's <Link> and
+ * router do not cover: auth email redirects, manifest, plain <a> tags).
+ */
+export function appUrl(path: string): string {
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${origin}${BASE_PATH}${p}`;
+}

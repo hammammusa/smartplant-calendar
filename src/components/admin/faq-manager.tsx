@@ -1,10 +1,9 @@
 "use client";
 
 import { Plus, Save, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { deleteFaqAction, saveFaqAction } from "@/actions/admin";
+import { deleteFaqAction, saveFaqAction } from "@/data-access/admin";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, Textarea } from "@/components/ui/form-controls";
@@ -76,12 +75,11 @@ function FaqItem({ faq, onDone }: { faq: FaqRow | null; onDone: () => void }) {
   );
 }
 
-export function FaqManager({ faqs }: { faqs: FaqRow[] }) {
-  const router = useRouter();
+export function FaqManager({ faqs, onChanged }: { faqs: FaqRow[]; onChanged: () => void }) {
   const [adding, setAdding] = useState(false);
   const refresh = () => {
     setAdding(false);
-    router.refresh();
+    onChanged();
   };
   return (
     <div className="flex flex-col gap-4">

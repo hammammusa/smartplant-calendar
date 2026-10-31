@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { absoluteUrl } from "@/lib/env";
 import { ProsePage } from "@/components/layout/prose-page";
 
-export const metadata: Metadata = { title: "سياسة الخصوصية", alternates: { canonical: "/privacy" } };
+export const metadata: Metadata = { title: "سياسة الخصوصية", alternates: { canonical: absoluteUrl("/privacy") } };
 
 export default function PrivacyPage() {
   return (

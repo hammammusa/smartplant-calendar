@@ -1,4 +1,5 @@
 import { Mail } from "lucide-react";
+import { absoluteUrl } from "@/lib/env";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProsePage } from "@/components/layout/prose-page";
@@ -6,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { getContactEmail } from "@/services/content";
 
-export const metadata: Metadata = { title: "تواصل معنا", alternates: { canonical: "/contact" } };
-export const revalidate = 300;
+export const metadata: Metadata = { title: "تواصل معنا", alternates: { canonical: absoluteUrl("/contact") } };
 
 export default async function ContactPage() {
   const email = await getContactEmail();

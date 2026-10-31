@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { updateRegionZoneAction } from "@/actions/admin";
+import { updateRegionZoneAction } from "@/data-access/admin";
 import { Select } from "@/components/ui/form-controls";
 import { CLIMATE_ZONE_LABELS } from "@/domain/labels";
 import { CLIMATE_ZONES, type ClimateZone } from "@/domain/types";

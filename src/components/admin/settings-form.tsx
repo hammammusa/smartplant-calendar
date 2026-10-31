@@ -5,7 +5,7 @@ import { Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
-import { saveSettingsAction } from "@/actions/admin";
+import { saveSettingsAction } from "@/data-access/admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/feedback";

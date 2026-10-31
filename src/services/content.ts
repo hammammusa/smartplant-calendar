@@ -1,7 +1,7 @@
 import "server-only";
 import { SEED_FAQS, type Faq } from "@/data/faqs";
 import { DEFAULT_THRESHOLDS, type WeatherThresholds } from "@/domain/weather";
-import { getPublicSupabase } from "@/lib/supabase/server";
+import { getPublicSupabase } from "@/lib/supabase/public";
 
 export async function getFaqs(): Promise<Faq[]> {
   const supabase = getPublicSupabase();

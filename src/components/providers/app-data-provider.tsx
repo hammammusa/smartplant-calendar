@@ -20,7 +20,7 @@ import {
   updatePlantingStatusAction,
   updateTaskAction,
   type ActionResult,
-} from "@/actions/user-data";
+} from "@/data-access/user-data";
 import type { PlanRequest, TaskInput, TaskPatch } from "@/domain/schemas";
 import type { Crop, PlantingStatus, Task, UserDataSnapshot } from "@/domain/types";
 import { DEFAULT_TIMEZONE, todayInTimeZone } from "@/lib/dates";

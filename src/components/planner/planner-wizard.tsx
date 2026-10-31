@@ -27,6 +27,7 @@ import { z } from "zod";
 import { CropArt } from "@/components/brand/crop-art";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Alert, Spinner } from "@/components/ui/feedback";
 import { Field, Input, Select, Textarea } from "@/components/ui/form-controls";
@@ -67,7 +68,14 @@ const detailsSchema = z.object({
 });
 type Details = z.input<typeof detailsSchema>;
 
-export function PlannerWizard({ crops, zoneOverrides = {} }: { crops: Crop[]; zoneOverrides?: Record<string, string> }) {
+export function PlannerWizard(props: { crops: Crop[]; zoneOverrides?: Record<string, string> }) {
+  // Wait for the browser so "today" and the saved location are the visitor's, not the build's.
+  const { mode } = useAppData();
+  if (mode === "loading") return <Skeleton className="h-[32rem] w-full rounded-2xl" />;
+  return <PlannerWizardInner {...props} />;
+}
+
+function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zoneOverrides?: Record<string, string> }) {
   const suggestedZone = (r: { id: string; zone: ClimateZone }) =>
     (CLIMATE_ZONES as readonly string[]).includes(zoneOverrides[r.id]) ? (zoneOverrides[r.id] as ClimateZone) : r.zone;
   const router = useRouter();

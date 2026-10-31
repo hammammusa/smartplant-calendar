@@ -22,7 +22,8 @@ import { useAppData } from "@/components/providers/app-data-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { findRegion } from "@/data/regions";
-import { describeWeatherCode, type WeatherAlert, type WeatherForecast, type WeatherIcon } from "@/domain/weather";
+import { describeWeatherCode, type WeatherIcon } from "@/domain/weather";
+import { fetchWeather, type WeatherPayload, type WeatherResult } from "@/lib/weather-client";
 import { formatDate, formatDateTime, formatNumber, WEEKDAYS } from "@/lib/format";
 import { weekday } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -38,29 +39,10 @@ const ICONS: Record<WeatherIcon, LucideIcon> = {
   storm: CloudLightning,
 };
 
-interface WeatherPayload {
-  forecast: WeatherForecast;
-  alerts: WeatherAlert[];
-}
-
-type Loaded = { status: "ok"; data: WeatherPayload } | { status: "error"; message: string };
+type Loaded = WeatherResult;
 type State = { status: "loading" } | Loaded;
 
 const t = (v: number | null) => (v == null ? "—" : `${formatNumber(Math.round(v), 0)}°`);
-
-async function fetchWeather(lat: number, lon: number, tz: string): Promise<Loaded> {
-  if (!navigator.onLine) {
-    return { status: "error", message: "لا يوجد اتصال بالإنترنت، لذلك لا يمكن تحديث بيانات الطقس الآن." };
-  }
-  try {
-    const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}&tz=${encodeURIComponent(tz)}`);
-    const json = await res.json();
-    if (!res.ok) return { status: "error", message: json.error ?? "تعذّر الحصول على بيانات الطقس حاليًا." };
-    return { status: "ok", data: json as WeatherPayload };
-  } catch {
-    return { status: "error", message: "تعذّر الاتصال بخدمة الطقس حاليًا. بقية المنصة تعمل بشكل طبيعي." };
-  }
-}
 
 export function useWeather() {
   const { location, mode } = useAppData();

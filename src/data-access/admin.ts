@@ -1,12 +1,16 @@
-"use server";
+"use client";
 
 /**
- * Admin server actions. Authorisation is enforced twice:
- *   1. here, by verifying the session and the admin role on the server;
- *   2. in PostgreSQL, where RLS only lets is_admin() write content tables.
+ * Admin data access (browser). The role check here only improves the UX:
+ * real authorisation is PostgreSQL Row Level Security, where only is_admin()
+ * may write content tables and the crop-images bucket. A non-admin calling the
+ * API directly is rejected by the database.
+ *
+ * Public pages are pre-rendered at build time, so content changes appear on
+ * the public site after the next GitHub Pages build (daily, or run manually).
  */
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { DEFAULT_THRESHOLDS } from "@/domain/weather";
 import {
   adminCropRulesSchema,
   adminCropSchema,
@@ -15,14 +19,17 @@ import {
   adminSettingsSchema,
   uuidSchema,
 } from "@/domain/schemas";
-import { getServerSupabase } from "@/lib/supabase/server";
+import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { ActionResult } from "./user-data";
+export type { ActionResultOf } from "./user-data";
+import { CROP_SELECT, mapCropRow, type CropRow } from "@/services/crop-mapper";
+import type { Crop } from "@/domain/types";
 
 const FORBIDDEN = "لا تملك صلاحية تنفيذ هذه العملية.";
 const GENERIC = "تعذّر حفظ التغييرات. حاول مرة أخرى.";
 
 async function adminCtx() {
-  const supabase = await getServerSupabase();
+  const supabase = getBrowserSupabase();
   if (!supabase) return { error: "قاعدة البيانات غير مهيأة." } as const;
   const { data } = await supabase.auth.getUser();
   if (!data.user) return { error: "انتهت جلستك. سجّل الدخول مرة أخرى." } as const;
@@ -43,12 +50,6 @@ function fail(scope: string, message: string, code?: string): { ok: false; error
   return { ok: false, error: GENERIC };
 }
 
-function revalidateContent(slug?: string) {
-  revalidatePath("/");
-  revalidatePath("/crops");
-  revalidatePath("/planner");
-  if (slug) revalidatePath(`/crops/${slug}`);
-}
 
 export async function saveCropAction(id: string | null, raw: unknown): Promise<ActionResult<{ id: string }>> {
   const parsed = adminCropSchema.safeParse(raw);
@@ -85,7 +86,6 @@ export async function saveCropAction(id: string | null, raw: unknown): Promise<A
     : ctx.supabase.from("crops").insert(row).select("id").single();
   const { data, error } = await q;
   if (error) return fail("crop:save", error.message, error.code);
-  revalidateContent(v.slug);
   return { ok: true, data: { id: data.id as string } };
 }
 
@@ -134,8 +134,6 @@ export async function saveCropRulesAction(cropId: string, raw: unknown): Promise
       .insert(v.guide.map((g, i) => ({ crop_id: cropId, section: g.section, title: g.title, body: g.body, sort_order: i })));
     if (error) return fail("rules:guide", error.message, error.code);
   }
-  const { data: crop } = await supabase.from("crops").select("slug").eq("id", cropId).maybeSingle();
-  revalidateContent(crop?.slug as string | undefined);
   return { ok: true, data: null };
 }
 
@@ -145,7 +143,6 @@ export async function deleteCropAction(id: string): Promise<ActionResult<null>> 
   if ("error" in ctx) return { ok: false, error: ctx.error ?? FORBIDDEN };
   const { error } = await ctx.supabase.from("crops").delete().eq("id", id);
   if (error) return fail("crop:delete", error.message, error.code);
-  revalidateContent();
   return { ok: true, data: null };
 }
 
@@ -179,7 +176,6 @@ export async function saveFaqAction(id: string | null, raw: unknown): Promise<Ac
   const row = { question: v.question, answer: v.answer, sort_order: v.sortOrder, is_published: v.isPublished };
   const { error } = id ? await ctx.supabase.from("faqs").update(row).eq("id", id) : await ctx.supabase.from("faqs").insert(row);
   if (error) return fail("faq:save", error.message, error.code);
-  revalidatePath("/");
   return { ok: true, data: null };
 }
 
@@ -189,7 +185,6 @@ export async function deleteFaqAction(id: string): Promise<ActionResult<null>> {
   if ("error" in ctx) return { ok: false, error: ctx.error ?? FORBIDDEN };
   const { error } = await ctx.supabase.from("faqs").delete().eq("id", id);
   if (error) return fail("faq:delete", error.message, error.code);
-  revalidatePath("/");
   return { ok: true, data: null };
 }
 
@@ -204,8 +199,6 @@ export async function saveSettingsAction(raw: unknown): Promise<ActionResult<nul
     { key: "contact", value: { email: contactEmail }, updated_by: ctx.user.id, updated_at: new Date().toISOString() },
   ]);
   if (error) return fail("settings:save", error.message, error.code);
-  revalidatePath("/weather");
-  revalidatePath("/contact");
   return { ok: true, data: null };
 }
 
@@ -217,4 +210,91 @@ export async function updateRegionZoneAction(raw: unknown): Promise<ActionResult
   const { error } = await ctx.supabase.from("regions").update({ zone: parsed.data.zone }).eq("id", parsed.data.id);
   if (error) return fail("region:update", error.message, error.code);
   return { ok: true, data: null };
+}
+
+/* ---------- Reads for the admin screens ---------- */
+
+export interface AdminStats {
+  users: number;
+  users_last_30_days: number;
+  gardens: number;
+  plantings: number;
+  active_plantings: number;
+  tasks: number;
+  tasks_done: number;
+  top_crops: { name: string; count: number }[];
+  zones: { zone: string; count: number }[];
+}
+
+export async function getAdminStats(): Promise<ActionResult<AdminStats>> {
+  const ctx = await adminCtx();
+  if ("error" in ctx) return { ok: false, error: ctx.error ?? FORBIDDEN };
+  const { data, error } = await ctx.supabase.rpc("admin_stats");
+  if (error) return fail("stats", error.message, error.code);
+  return { ok: true, data: data as AdminStats };
+}
+
+export interface AdminCropListItem {
+  id: string;
+  slug: string;
+  name: string;
+  category: Crop["category"];
+  data_status: Crop["dataStatus"];
+  is_published: boolean;
+}
+
+export async function listAdminCrops(): Promise<ActionResult<AdminCropListItem[]>> {
+  const ctx = await adminCtx();
+  if ("error" in ctx) return { ok: false, error: ctx.error ?? FORBIDDEN };
+  const { data, error } = await ctx.supabase
+    .from("crops")
+    .select("id, slug, name, category, data_status, is_published")
+    .order("name");
+  if (error) return fail("crops:list", error.message, error.code);
+  return { ok: true, data: data as AdminCropListItem[] };
+}
+
+export async function getAdminCrop(id: string): Promise<ActionResult<{ crop: Crop; published: boolean } | null>> {
+  if (!uuidSchema.safeParse(id).success) return { ok: true, data: null };
+  const ctx = await adminCtx();
+  if ("error" in ctx) return { ok: false, error: ctx.error ?? FORBIDDEN };
+  const { data, error } = await ctx.supabase.from("crops").select(CROP_SELECT).eq("id", id).maybeSingle();
+  if (error) return fail("crop:get", error.message, error.code);
+  if (!data) return { ok: true, data: null };
+  const row = data as CropRow;
+  return { ok: true, data: { crop: mapCropRow(row), published: row.is_published ?? true } };
+}
+
+export interface FaqRecord {
+  id: string;
+  question: string;
+  answer: string;
+  sort_order: number;
+  is_published: boolean;
+}
+
+export async function listAdminFaqs(): Promise<ActionResult<FaqRecord[]>> {
+  const ctx = await adminCtx();
+  if ("error" in ctx) return { ok: false, error: ctx.error ?? FORBIDDEN };
+  const { data, error } = await ctx.supabase.from("faqs").select("id, question, answer, sort_order, is_published").order("sort_order");
+  if (error) return fail("faqs:list", error.message, error.code);
+  return { ok: true, data: data as FaqRecord[] };
+}
+
+export async function listAdminRegions(): Promise<ActionResult<{ id: string; name: string; zone: string; country_code: string }[]>> {
+  const ctx = await adminCtx();
+  if ("error" in ctx) return { ok: false, error: ctx.error ?? FORBIDDEN };
+  const { data, error } = await ctx.supabase.from("regions").select("id, name, zone, country_code").order("sort_order");
+  if (error) return fail("regions:list", error.message, error.code);
+  return { ok: true, data: data as { id: string; name: string; zone: string; country_code: string }[] };
+}
+
+export async function getAdminSettings(): Promise<ActionResult<z.infer<typeof adminSettingsSchema>>> {
+  const ctx = await adminCtx();
+  if ("error" in ctx) return { ok: false, error: ctx.error ?? FORBIDDEN };
+  const { data, error } = await ctx.supabase.from("site_settings").select("key, value");
+  if (error) return fail("settings:get", error.message, error.code);
+  const get = (k: string) => (data ?? []).find((r) => r.key === k)?.value as Record<string, unknown> | undefined;
+  const th = { ...DEFAULT_THRESHOLDS, ...(get("weather_thresholds") ?? {}) };
+  return { ok: true, data: { ...(th as typeof DEFAULT_THRESHOLDS), contactEmail: String(get("contact")?.email ?? "") } };
 }

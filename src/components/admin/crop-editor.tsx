@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { deleteCropAction, saveCropAction, saveCropRulesAction, uploadCropImageAction } from "@/actions/admin";
+import { deleteCropAction, saveCropAction, saveCropRulesAction, uploadCropImageAction } from "@/data-access/admin";
 import { CropArt } from "@/components/brand/crop-art";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,8 +139,7 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
               const res = await saveCropAction(cropId, v);
               if (!res.ok) return void toast.error(res.error);
               toast.success("تم حفظ بيانات المحصول");
-              if (!cropId) router.replace(`/admin/crops/${res.data.id}`);
-              else router.refresh();
+              if (!cropId) router.replace(`/admin/crops/edit?id=${res.data.id}`);
             })}
           >
             <Field label="اسم المحصول" htmlFor="name" error={errors.name?.message}>
@@ -293,7 +292,6 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
               const res = await saveCropRulesAction(cropId, v);
               if (!res.ok) return void toast.error(res.error);
               toast.success("تم حفظ المواعيد والقواعد والإرشادات");
-              router.refresh();
             },
             () => toast.error("توجد حقول غير صالحة في المواعيد أو القواعد أو الإرشادات."),
           )}

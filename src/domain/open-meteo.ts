@@ -1,17 +1,18 @@
-import "server-only";
-import type { DailyForecast, WeatherForecast } from "@/domain/weather";
-
 /**
- * Open-Meteo's free endpoint is for non-commercial use. For commercial use set
- * OPEN_METEO_API_KEY (server-only) to switch to the customer endpoint.
+ * Open-Meteo request/response mapping. Pure functions, shared by the browser
+ * client and the unit tests.
+ *
+ * Open-Meteo's free endpoint allows cross-origin browser requests and needs no
+ * key, but is intended for non-commercial use. A paid key must never be put in
+ * the static bundle; commercial deployments should proxy requests through a
+ * small backend (see README).
  */
-const API_KEY = process.env.OPEN_METEO_API_KEY ?? "";
-const ENDPOINT = API_KEY
-  ? "https://customer-api.open-meteo.com/v1/forecast"
-  : "https://api.open-meteo.com/v1/forecast";
+import type { DailyForecast, WeatherForecast } from "./weather";
+
+export const OPEN_METEO_ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 export const FORECAST_DAYS = 7;
 
-interface OpenMeteoResponse {
+export interface OpenMeteoResponse {
   latitude: number;
   longitude: number;
   timezone: string;
@@ -35,10 +36,7 @@ interface OpenMeteoResponse {
   };
 }
 
-export class WeatherUnavailableError extends Error {}
-
-/** Fetches a short forecast from Open-Meteo (cached for 30 minutes). */
-export async function fetchForecast(lat: number, lon: number, timezone: string): Promise<WeatherForecast> {
+export function buildForecastUrl(lat: number, lon: number, timezone: string): string {
   const params = new URLSearchParams({
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
@@ -48,19 +46,10 @@ export async function fetchForecast(lat: number, lon: number, timezone: string):
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max",
   });
-  if (API_KEY) params.set("apikey", API_KEY);
+  return `${OPEN_METEO_ENDPOINT}?${params}`;
+}
 
-  let res: Response;
-  try {
-    res = await fetch(`${ENDPOINT}?${params}`, {
-      next: { revalidate: 1800 },
-      signal: AbortSignal.timeout(8000),
-    });
-  } catch (err) {
-    throw new WeatherUnavailableError(`network: ${(err as Error).message}`);
-  }
-  if (!res.ok) throw new WeatherUnavailableError(`status ${res.status}`);
-  const json = (await res.json()) as OpenMeteoResponse;
+export function mapForecast(json: OpenMeteoResponse, fetchedAt: string): WeatherForecast {
   const d = json.daily;
   const daily: DailyForecast[] = (d?.time ?? []).map((date, i) => ({
     date,
@@ -87,6 +76,6 @@ export async function fetchForecast(lat: number, lon: number, timezone: string):
     },
     daily,
     source: "Open-Meteo",
-    fetchedAt: new Date().toISOString(),
+    fetchedAt,
   };
 }

@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = Number(process.env.E2E_PORT ?? 3100);
+const PORT = Number(process.env.E2E_PORT ?? 3200);
+/** Tests run against the static export (`out/`) served like GitHub Pages under this sub-path. */
+export const BASE_PATH = process.env.E2E_BASE_PATH ?? "/smartplant-calendar";
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -20,9 +22,10 @@ export default defineConfig({
   webServer: process.env.E2E_NO_SERVER
     ? undefined
     : {
-        command: `npm run start -- -p ${PORT}`,
-        url: `http://localhost:${PORT}`,
+        command: `node scripts/serve-static.mjs ${PORT}`,
+        url: `http://localhost:${PORT}${BASE_PATH}/`,
         reuseExistingServer: true,
-        timeout: 120_000,
+        timeout: 60_000,
+        env: { BASE_PATH },
       },
 });

@@ -1,7 +1,7 @@
 import "server-only";
 import { SEED_CROPS } from "@/data/crops";
 import type { Crop } from "@/domain/types";
-import { getPublicSupabase } from "@/lib/supabase/server";
+import { getPublicSupabase } from "@/lib/supabase/public";
 import { CROP_SELECT, mapCropRow, type CropRow } from "./crop-mapper";
 
 export interface CropCatalogue {

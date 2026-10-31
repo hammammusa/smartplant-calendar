@@ -19,5 +19,6 @@ fi
 PSQL=(psql -h /tmp -p "$PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -q)
 "${PSQL[@]}" -f "$ROOT/tests/db/supabase-stub.sql"
 "${PSQL[@]}" -f "$ROOT/supabase/migrations/20261027000001_init.sql"
+"${PSQL[@]}" -f "$ROOT/supabase/migrations/20261101000003_client_hardening.sql"
 "${PSQL[@]}" -f "$ROOT/supabase/seed.sql"
 "${PSQL[@]}" -f "$ROOT/tests/db/rls.test.sql"

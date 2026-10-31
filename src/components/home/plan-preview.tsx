@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { MiniMonth } from "@/components/calendar/mini-month";
 import { TaskTypeIcon } from "@/components/tasks/task-type-badge";
+import { useAppData } from "@/components/providers/app-data-provider";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Label, Select } from "@/components/ui/form-controls";
 import { CLIMATE_ZONE_LABELS } from "@/domain/labels";
 import { generatePlan } from "@/domain/plan-generator";
@@ -17,7 +19,14 @@ import { formatDate } from "@/lib/format";
  * Interactive homepage preview: runs the real plan generator in the browser.
  * Nothing is saved — the section says so explicitly.
  */
-export function PlanPreview({ crops, defaultDate }: { crops: Crop[]; defaultDate: ISODate }) {
+export function PlanPreview({ crops }: { crops: Crop[] }) {
+  // "Today" must come from the visitor's browser: static pages are built ahead of time.
+  const { today, mode } = useAppData();
+  if (mode === "loading") return <Skeleton className="h-[34rem] w-full rounded-2xl" />;
+  return <PlanPreviewInner key={today} crops={crops} defaultDate={today} />;
+}
+
+function PlanPreviewInner({ crops, defaultDate }: { crops: Crop[]; defaultDate: ISODate }) {
   const [slug, setSlug] = useState(crops[0]?.slug ?? "");
   const [zone, setZone] = useState<ClimateZone>("highland");
   const [plantedOn, setPlantedOn] = useState(defaultDate);

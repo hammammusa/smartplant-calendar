@@ -13,6 +13,7 @@ import { Alert, Spinner } from "@/components/ui/feedback";
 import { Checkbox, Field, Input } from "@/components/ui/form-controls";
 import { forgotPasswordSchema, loginSchema, registerSchema, updatePasswordSchema } from "@/domain/schemas";
 import { authErrorMessage, safeNext } from "@/lib/auth-errors";
+import { appUrl } from "@/lib/env";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 function PasswordInput({ id, invalid, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { id: string; invalid?: boolean }) {
@@ -32,9 +33,6 @@ function PasswordInput({ id, invalid, ...props }: React.InputHTMLAttributes<HTML
   );
 }
 
-function origin() {
-  return typeof window === "undefined" ? "" : window.location.origin;
-}
 
 export function LoginForm() {
   const router = useRouter();
@@ -106,7 +104,7 @@ export function RegisterForm() {
         const { data, error: err } = await supabase.auth.signUp({
           email: v.email,
           password: v.password,
-          options: { data: { full_name: v.fullName }, emailRedirectTo: `${origin()}/auth/confirm?next=/dashboard` },
+          options: { data: { full_name: v.fullName }, emailRedirectTo: appUrl("/auth/confirm/?next=/dashboard/") },
         });
         if (err) return setError(authErrorMessage(err));
         if (data.session) {
@@ -170,7 +168,7 @@ export function ForgotPasswordForm() {
         const supabase = getBrowserSupabase();
         if (!supabase) return;
         const { error: err } = await supabase.auth.resetPasswordForEmail(v.email, {
-          redirectTo: `${origin()}/auth/confirm?next=/auth/update-password`,
+          redirectTo: appUrl("/auth/confirm/?next=/auth/update-password/"),
         });
         // Do not reveal whether the email exists; only surface rate-limit/network problems.
         if (err && (err.status === 429 || err.code?.startsWith("over_"))) return setError(authErrorMessage(err));

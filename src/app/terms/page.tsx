@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { absoluteUrl } from "@/lib/env";
 import { ProsePage } from "@/components/layout/prose-page";
 
-export const metadata: Metadata = { title: "شروط الاستخدام", alternates: { canonical: "/terms" } };
+export const metadata: Metadata = { title: "شروط الاستخدام", alternates: { canonical: absoluteUrl("/terms") } };
 
 export default function TermsPage() {
   return (

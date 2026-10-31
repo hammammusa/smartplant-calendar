@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
+import { absoluteUrl } from "@/lib/env";
 import { CropBrowser } from "@/components/crops/crop-browser";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert } from "@/components/ui/feedback";
 import { getCrops } from "@/services/crops";
 
-export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "دليل المحاصيل الزراعية",
   description: "دليل عربي للمحاصيل المنزلية في فلسطين وبلاد الشام: مواعيد الزراعة حسب المنطقة، واحتياجات الشمس والري، ومدة النمو، والمشكلات الشائعة.",
-  alternates: { canonical: "/crops" },
+  alternates: { canonical: absoluteUrl("/crops") },
 };
 
 export default async function CropsPage() {

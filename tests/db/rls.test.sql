@@ -61,6 +61,23 @@ do $$ begin
   end;
 end $$;
 
+-- Constraints added for the static build reject malformed rows from direct API calls.
+do $$ begin
+  begin
+    insert into public.gardens (name, space_type, zone) values ('   ', 'balcony', 'coastal');
+    raise exception 'blank garden name accepted';
+  exception when check_violation then null;
+  end;
+  begin
+    perform public.create_plan(jsonb_build_object(
+      'garden', jsonb_build_object('name','x','space_type','balcony','zone','coastal'),
+      'planting', jsonb_build_object('crop_slug','Bad Slug!','crop_name','x','planted_on','2026-04-15'),
+      'tasks', '[]'::jsonb));
+    raise exception 'invalid crop slug accepted';
+  exception when check_violation then null;
+  end;
+end $$;
+
 -- ---------- user B must not see or touch A's data ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false);
 do $$

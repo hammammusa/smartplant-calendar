@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { absoluteUrl } from "@/lib/env";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { StorageNotice } from "@/components/layout/storage-notice";
@@ -7,12 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getRegionZoneOverrides } from "@/services/content";
 import { getCrops } from "@/services/crops";
 
-export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "مولّد الخطط الزراعية",
   description: "أنشئ خطة زراعية شخصية خطوة بخطوة: حدد موقعك ومساحتك ومحصولك وتاريخ الزراعة، واحصل على مهام الري والتسميد والحصاد في رزنامتك.",
-  alternates: { canonical: "/planner" },
+  alternates: { canonical: absoluteUrl("/planner") },
 };
 
 export default async function PlannerPage() {

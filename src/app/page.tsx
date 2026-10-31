@@ -26,7 +26,6 @@ import { monthOf, todayInTimeZone } from "@/lib/dates";
 import { getFaqs } from "@/services/content";
 import { getCrops } from "@/services/crops";
 
-export const revalidate = 300;
 
 const STEPS = [
   { icon: MapPin, title: "حدّد منطقتك ومساحتك", text: "اختر مدينتك ونوع مساحتك: حديقة أو سطح أو شرفة أو أصص أو أرض. نحدد منطقتك المناخية لأن الخليل لا تشبه غزة أو أريحا." },
@@ -123,7 +122,7 @@ export default async function HomePage() {
             <h2 id="preview" className="text-3xl font-extrabold">معاينة تفاعلية للرزنامة الزراعية</h2>
             <p className="mt-3 text-muted-foreground">غيّر المحصول والمنطقة وتاريخ الزراعة، وشاهد كيف تتوزع المهام على الأيام.</p>
           </div>
-          <PlanPreview crops={previewCrops} defaultDate={today} />
+          <PlanPreview crops={previewCrops} />
         </div>
       </section>
 

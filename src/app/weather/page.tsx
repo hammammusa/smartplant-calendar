@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { absoluteUrl } from "@/lib/env";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { WeatherLocationPicker } from "@/components/weather/location-picker";
@@ -9,10 +10,9 @@ import { formatNumber } from "@/lib/format";
 export const metadata: Metadata = {
   title: "الطقس الزراعي",
   description: "توقعات الطقس للأيام القادمة مع تنبيهات زراعية للصقيع والحرارة المرتفعة والأمطار والرياح.",
-  alternates: { canonical: "/weather" },
+  alternates: { canonical: absoluteUrl("/weather") },
 };
 
-export const revalidate = 300;
 
 export default async function WeatherPage() {
   const th = await getWeatherThresholds();

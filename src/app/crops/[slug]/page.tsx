@@ -1,4 +1,5 @@
 import { ArrowLeft, CalendarRange, Clock3, Droplets, Home, Info, Sun } from "lucide-react";
+import { absoluteUrl } from "@/lib/env";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,7 +24,9 @@ import { CLIMATE_ZONES } from "@/domain/types";
 import { formatMonthRange } from "@/lib/format";
 import { getCropBySlug, getCrops } from "@/services/crops";
 
-export const revalidate = 300;
+
+// Static export: only crops known at build time get pages (rebuild to add new ones).
+export const dynamicParams = false;
 
 export async function generateStaticParams() {
   const { crops } = await getCrops();
@@ -37,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `زراعة ${crop.name}: المواعيد والعناية والحصاد`,
     description: `${crop.summary} مواعيد زراعة ${crop.name} حسب المنطقة المناخية، واحتياجات الري والشمس، والمشكلات الشائعة.`,
-    alternates: { canonical: `/crops/${crop.slug}` },
+    alternates: { canonical: absoluteUrl(`/crops/${crop.slug}`) },
   };
 }
 

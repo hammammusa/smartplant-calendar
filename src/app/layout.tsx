@@ -10,10 +10,10 @@ import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { AppDataProvider } from "@/components/providers/app-data-provider";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/env";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/env";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+  metadataBase: new URL(`${SITE_URL}/`),
   title: { default: `${SITE_NAME} — خطط لزراعتك في الوقت المناسب`, template: `%s | ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -26,7 +26,8 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
-  alternates: { canonical: "/" },
+  alternates: { canonical: absoluteUrl("/") },
+  referrer: "strict-origin-when-cross-origin",
 };
 
 export const viewport: Viewport = {
