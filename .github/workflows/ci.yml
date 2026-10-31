@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Static export build (GitHub Pages paths)
+        run: npm run build:pages
+      - name: Check the export uses the /smartplant-calendar base path
+        run: |
+          test -f out/index.html && test -f out/404.html && test -f out/crops/tomato/index.html
+          grep -q '/smartplant-calendar/_next/static/' out/index.html
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Use the distribution's default PostgreSQL (the runner image version changes over time);
+      # tests/db/run.sh picks the newest /usr/lib/postgresql/*/bin automatically.
+      - name: Install PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          ls /usr/lib/postgresql/
+      - run: bash tests/db/run.sh
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build:pages
+      # Serves out/ like GitHub Pages under /smartplant-calendar/ (scripts/serve-static.mjs).
+      - run: npm run test:e2e
