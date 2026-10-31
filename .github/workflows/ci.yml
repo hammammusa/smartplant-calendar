@@ -24,13 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install PostgreSQL 16
+      # Use the distribution's default PostgreSQL (the runner image version changes over time);
+      # tests/db/run.sh picks the newest /usr/lib/postgresql/*/bin automatically.
+      - name: Install PostgreSQL
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-16
+          sudo apt-get install -y postgresql
+          ls /usr/lib/postgresql/
       - run: bash tests/db/run.sh
-        env:
-          PGBIN: /usr/lib/postgresql/16/bin
 
   e2e:
     runs-on: ubuntu-latest
