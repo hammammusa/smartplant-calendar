@@ -104,8 +104,8 @@ export function CalendarView() {
               <ChevronLeft />
             </Button>
           </div>
-          <h2 className="min-w-0 flex-1 truncate text-lg font-extrabold sm:text-xl" aria-live="polite">{title}</h2>
-          <Button variant="ghost" size="sm" onClick={goToday}>اليوم</Button>
+          <h2 className="order-first w-full text-lg font-extrabold sm:order-none sm:w-auto sm:min-w-0 sm:flex-1 sm:truncate sm:text-xl" aria-live="polite">{title}</h2>
+          <Button variant="ghost" size="sm" className="me-auto sm:me-0" onClick={goToday}>اليوم</Button>
           <div role="tablist" aria-label="طريقة العرض" className="flex rounded-lg bg-surface-muted p-1">
             {VIEWS.map((v) => (
               <button

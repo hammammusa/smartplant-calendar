@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return (
       <div className="container-page py-12">
         <Alert tone="warning" title="لوحة الإدارة تتطلب تهيئة قاعدة البيانات">
-          لوحة الإدارة تعمل فقط بعد ربط المنصة بمشروع Supabase وترقية حسابك إلى مشرف. راجع قسم «الإعداد» في ملف README.
+          لوحة الإدارة تعمل فقط بعد ربط المنصة بمشروع Supabase وترقية حسابك إلى مشرف. راجع قسم «الإعداد» في ملف التوثيق المرفق مع المشروع.
         </Alert>
       </div>
     );

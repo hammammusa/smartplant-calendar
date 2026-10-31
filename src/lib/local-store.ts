@@ -106,7 +106,9 @@ export function localCreatePlan(snap: UserDataSnapshot, input: PlanRequest, crop
     notes: input.notes || null,
     createdAt: created,
   };
-  const tasks: Task[] = plan.tasks.map((t) => ({
+  const tasks: Task[] = plan.tasks.map((t) => {
+    const past = !!input.completeBefore && t.dueDate < input.completeBefore;
+    return {
     id: newId(),
     plantingId: planting.id,
     gardenId: garden.id,
@@ -114,12 +116,13 @@ export function localCreatePlan(snap: UserDataSnapshot, input: PlanRequest, crop
     title: t.title,
     description: t.description,
     dueDate: t.dueDate,
-    status: "pending",
-    completedAt: null,
+    status: past ? "done" : "pending",
+    completedAt: past ? created : null,
     postponedCount: 0,
     source: "generated",
     createdAt: created,
-  }));
+    } satisfies Task;
+  });
   return {
     snapshot: {
       gardens: existing ? snap.gardens : [...snap.gardens, garden],

@@ -111,12 +111,6 @@ export function DashboardView() {
         </div>
       </div>
 
-      {mode === "local" ? (
-        <Alert tone="warning" title={app.user ? undefined : "بيانات هذا المتصفح"}>
-          تعرض هذه اللوحة البيانات المحفوظة في هذا المتصفح فقط.{" "}
-          {data.tasks.length === 0 ? "لا توجد بيانات بعد — لن نعرض أرقامًا تجريبية." : null}
-        </Alert>
-      ) : null}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat icon={Sprout} label="محاصيل نشطة" value={active.length} tone="bg-accent text-accent-foreground" href="#my-crops" />

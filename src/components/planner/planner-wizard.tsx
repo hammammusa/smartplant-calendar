@@ -93,6 +93,7 @@ export function PlannerWizard({ crops, zoneOverrides = {} }: { crops: Crop[]; zo
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<{ crops: string[]; tasks: number } | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [completePast, setCompletePast] = useState(true);
 
   const region = findRegion(regionId);
   const form = useForm<Details>({
@@ -181,6 +182,7 @@ export function PlannerWizard({ crops, zoneOverrides = {} }: { crops: Crop[]; zo
           notes: v.notes,
           latitude: coords?.lat ?? region.latitude,
           longitude: coords?.lon ?? region.longitude,
+          completeBefore: completePast && v.plantedOn < app.today ? app.today : null,
         },
         crop,
       );
@@ -554,6 +556,15 @@ export function PlannerWizard({ crops, zoneOverrides = {} }: { crops: Crop[]; zo
                 </article>
               );
             })}
+            {plantedOn < app.today && plans.some(({ plan }) => plan.tasks.some((t) => t.dueDate < app.today)) ? (
+              <label className="flex items-start gap-3 rounded-xl border border-border bg-surface-muted p-4 text-sm leading-7">
+                <input type="checkbox" className="mt-1.5 accent-[var(--primary)]" checked={completePast} onChange={(e) => setCompletePast(e.target.checked)} />
+                <span>
+                  <span className="block font-semibold">تاريخ الزراعة في الماضي</span>
+                  اعتبر المهام الواقعة قبل اليوم ({formatNumber(plans.reduce((n, { plan }) => n + plan.tasks.filter((t) => t.dueDate < app.today).length, 0))} مهمة) مكتملة، حتى لا تظهر كمتأخرة.
+                </span>
+              </label>
+            ) : null}
             <p className="text-sm text-muted-foreground">
               {app.mode === "remote"
                 ? "ستُحفظ الخطة في حسابك، ويمكنك تعديل أي مهمة أو حذفها أو إضافة مهام خاصة لاحقًا."

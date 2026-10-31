@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
  * edit a task → mark it complete. Also asserts there is no stray English UI.
  */
 
-const ENGLISH_ALLOWED = /Open-Meteo|Solanum|Cucumis|Allium|Lactuca|Capsicum|Mentha|Origanum|Fragaria|Olea|Vitis|spp\.|ananassa|lycopersicum|sativus|tuberosum|cepa|sativum|annuum|syriacum|europaea|vinifera|×/g;
+const ENGLISH_ALLOWED = /Open-Meteo|Supabase|Solanum|Cucumis|Allium|Lactuca|Capsicum|Mentha|Origanum|Fragaria|Olea|Vitis|spp\.|ananassa|lycopersicum|sativus|tuberosum|cepa|sativum|annuum|syriacum|europaea|vinifera|×/g;
 
 async function expectNoStrayEnglish(page: Page) {
   const text = await page.locator("body").innerText();
@@ -14,6 +14,9 @@ async function expectNoStrayEnglish(page: Page) {
   const words = cleaned.match(/[A-Za-z]{3,}/g) ?? [];
   expect(words, `English words found: ${words.join(", ")}`).toEqual([]);
 }
+
+const NEXT_YEAR = new Date().getFullYear() + 1;
+const PLANT_DATE = `${NEXT_YEAR}-10-05`;
 
 test("guest can plan a crop and manage tasks in the calendar", async ({ page, isMobile }) => {
   await page.goto("/");
@@ -41,7 +44,7 @@ test("guest can plan a crop and manage tasks in the calendar", async ({ page, is
   await page.getByRole("button", { name: "التالي" }).click();
   await expect(page.getByRole("button", { name: /البندورة/, pressed: true })).toBeVisible();
   await page.getByRole("button", { name: "التالي" }).click();
-  await page.getByLabel("تاريخ الزراعة أو الشتل").fill("2026-10-05");
+  await page.getByLabel("تاريخ الزراعة أو الشتل").fill(PLANT_DATE);
   await page.getByLabel("اسم المساحة").fill("سطح البيت");
   await expect(page.getByText(/ضمن المواعيد المقترحة لمنطقتك/)).toBeVisible();
   await page.getByRole("button", { name: "التالي" }).click();
@@ -52,8 +55,8 @@ test("guest can plan a crop and manage tasks in the calendar", async ({ page, is
 
   // Calendar shows the planting day.
   await page.getByRole("button", { name: "عرض المهام في الرزنامة" }).click();
-  await expect(page).toHaveURL(/\/calendar\?date=2026-10-05/);
-  await expect(page.getByRole("heading", { name: /تشرين الأول 2026/ })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/calendar\\?date=${PLANT_DATE}`));
+  await expect(page.getByRole("heading", { name: new RegExp(`تشرين الأول \\(أكتوبر\\) ${NEXT_YEAR}`) })).toBeVisible();
   const dayPanel = page.locator("section[aria-labelledby='day-title']");
   await expect(dayPanel.getByText("شتل أشتال البندورة")).toBeVisible();
   await expectNoStrayEnglish(page);
@@ -63,7 +66,7 @@ test("guest can plan a crop and manage tasks in the calendar", async ({ page, is
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "تعديل" }).click();
   await dialog.getByLabel("عنوان المهمة").fill("شتل البندورة على السطح");
-  await dialog.getByLabel("التاريخ").fill("2026-10-06");
+  await dialog.getByLabel("التاريخ").fill(`${NEXT_YEAR}-10-06`);
   await dialog.getByRole("button", { name: "حفظ التعديلات" }).click();
   await expect(dialog.getByRole("heading", { name: "شتل البندورة على السطح" })).toBeVisible();
   await dialog.getByRole("button", { name: "وضع كمكتملة" }).click();
@@ -127,4 +130,47 @@ test("weather renders forecast and agricultural alerts from the API", async ({ p
   await expect(page.getByText(/احتمال صقيع —/)).toBeVisible();
   await expect(page.getByText(/المصدر: Open-Meteo/)).toBeVisible();
   await expectNoStrayEnglish(page);
+});
+
+test("planting in the past can mark earlier tasks as completed", async ({ page }) => {
+  const d = new Date(Date.now() - 20 * 86_400_000).toISOString().slice(0, 10);
+  await page.goto("/planner?crop=lettuce");
+  await page.getByRole("button", { name: "التالي" }).click();
+  await page.getByRole("radio", { name: /أصص زراعية/ }).click();
+  await page.getByRole("button", { name: "التالي" }).click();
+  await page.getByRole("button", { name: "التالي" }).click();
+  await page.getByLabel("تاريخ الزراعة أو الشتل").fill(d);
+  await page.getByRole("button", { name: "التالي" }).click();
+  await expect(page.getByText("تاريخ الزراعة في الماضي")).toBeVisible();
+  await page.getByRole("button", { name: "أنشئ الخطة" }).click();
+  await expect(page.getByRole("heading", { name: "خطتك جاهزة" })).toBeVisible();
+  await page.goto("/tasks");
+  await expect(page.getByText("لا توجد مهام لليوم أو متأخرة. عمل رائع!").or(page.getByText(/اليوم/).first())).toBeVisible();
+  await expect(page.locator("text=/متأخرة \\d/")).toHaveCount(0);
+});
+
+test("preview mode explains disabled accounts and protects admin", async ({ page }) => {
+  for (const path of ["/auth/login", "/auth/register", "/auth/forgot-password"]) {
+    await page.goto(path);
+    await expect(page.getByText("الحسابات غير مفعّلة في وضع المعاينة")).toBeVisible();
+    await expect(page.getByLabel("كلمة المرور")).toHaveCount(0);
+    await expectNoStrayEnglish(page);
+  }
+  await page.goto("/admin");
+  await expect(page.getByText("لوحة الإدارة تتطلب تهيئة قاعدة البيانات")).toBeVisible();
+  await page.goto("/profile");
+  await expect(page.getByText("الملف الشخصي غير متاح في وضع المعاينة")).toBeVisible();
+  const res = await page.goto("/this-page-does-not-exist");
+  expect(res?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "الصفحة غير موجودة" })).toBeVisible();
+  for (const path of ["/privacy", "/terms", "/contact", "/weather", "/crops/zaatar"]) {
+    await page.goto(path);
+    await expectNoStrayEnglish(page);
+  }
+});
+
+test("keyboard users can reach the main content and open the menu", async ({ page }) => {
+  await page.goto("/");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "تخطَّ إلى المحتوى" })).toBeFocused();
 });

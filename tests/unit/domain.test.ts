@@ -132,3 +132,20 @@ describe("validation messages are Arabic", () => {
     expect(mismatch.error!.issues.map((i) => i.message)).toContain("كلمتا المرور غير متطابقتين");
   });
 });
+
+import { authErrorMessage, safeNext } from "@/lib/auth-errors";
+
+describe("auth helpers", () => {
+  it("only allows same-site redirects", () => {
+    expect(safeNext("/calendar")).toBe("/calendar");
+    expect(safeNext("//evil.com")).toBe("/dashboard");
+    expect(safeNext("https://evil.com")).toBe("/dashboard");
+    expect(safeNext("/\\evil.com")).toBe("/dashboard");
+    expect(safeNext(null)).toBe("/dashboard");
+  });
+  it("translates Supabase auth errors to Arabic", () => {
+    expect(authErrorMessage({ code: "invalid_credentials" })).toBe("البريد الإلكتروني أو كلمة المرور غير صحيحة.");
+    expect(authErrorMessage({ status: 429 })).toContain("محاولات كثيرة");
+    expect(authErrorMessage({ message: "something odd" })).toMatch(/[؀-ۿ]/);
+  });
+});

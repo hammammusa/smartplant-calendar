@@ -49,6 +49,8 @@ export const planRequestSchema = z.object({
   notes: z.string().trim().max(500, { error: "الملاحظات طويلة جدًا (500 حرف كحد أقصى)" }).optional().default(""),
   latitude: z.number().min(-90).max(90).nullable(),
   longitude: z.number().min(-180).max(180).nullable(),
+  /** Generated tasks dated before this day are stored as already completed (late plan entry). */
+  completeBefore: isoDate().nullable().optional(),
 });
 export type PlanRequest = z.infer<typeof planRequestSchema>;
 

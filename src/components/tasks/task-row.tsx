@@ -39,8 +39,7 @@ export function TaskRow({ task, onOpen, showDate = true }: { task: Task; onOpen:
         <span className="min-w-0 flex-1">
           <span className={cn("block truncate font-semibold", done && "text-muted-foreground line-through decoration-1")}>{task.title}</span>
           <span className="block truncate text-xs text-muted-foreground">
-            {planting ? `${planting.cropName} · ` : ""}
-            {showDate ? formatDate(task.dueDate, { weekday: true, year: false }) : null}
+            {[planting?.cropName, showDate ? formatDate(task.dueDate, { weekday: true, year: false }) : null].filter(Boolean).join(" · ")}
           </span>
         </span>
         {!done ? (

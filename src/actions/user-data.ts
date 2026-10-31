@@ -124,6 +124,7 @@ export async function createPlanAction(raw: unknown): Promise<ActionResult<{ pla
         title: t.title,
         description: t.description,
         due_date: t.dueDate,
+        status: input.completeBefore && t.dueDate < input.completeBefore ? "done" : "pending",
         template_key: t.templateKey,
         source: "generated",
       })),
