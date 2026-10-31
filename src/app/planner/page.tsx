@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { StorageNotice } from "@/components/layout/storage-notice";
 import { PlannerWizard } from "@/components/planner/planner-wizard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getRegionZoneOverrides } from "@/services/content";
 import { getCrops } from "@/services/crops";
 
 export const revalidate = 300;
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PlannerPage() {
-  const { crops } = await getCrops();
+  const [{ crops }, zoneOverrides] = await Promise.all([getCrops(), getRegionZoneOverrides()]);
   return (
     <div className="container-page flex flex-col gap-6 py-10 sm:py-12">
       <PageHeader
@@ -25,7 +26,7 @@ export default async function PlannerPage() {
       />
       <StorageNotice />
       <Suspense fallback={<Skeleton className="h-[32rem] w-full rounded-2xl" />}>
-        <PlannerWizard crops={crops} />
+        <PlannerWizard crops={crops} zoneOverrides={zoneOverrides} />
       </Suspense>
     </div>
   );

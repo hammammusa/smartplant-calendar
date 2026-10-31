@@ -38,3 +38,12 @@ export async function getContactEmail(): Promise<string> {
   const value = await getSetting<{ email?: string }>("contact");
   return value?.email ?? "";
 }
+
+/** Admin-edited climate zones per region (falls back to the bundled defaults). */
+export async function getRegionZoneOverrides(): Promise<Record<string, string>> {
+  const supabase = getPublicSupabase();
+  if (!supabase) return {};
+  const { data, error } = await supabase.from("regions").select("id, zone");
+  if (error || !data) return {};
+  return Object.fromEntries(data.map((r) => [r.id as string, r.zone as string]));
+}

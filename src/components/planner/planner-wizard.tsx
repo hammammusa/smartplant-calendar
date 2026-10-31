@@ -67,7 +67,9 @@ const detailsSchema = z.object({
 });
 type Details = z.input<typeof detailsSchema>;
 
-export function PlannerWizard({ crops }: { crops: Crop[] }) {
+export function PlannerWizard({ crops, zoneOverrides = {} }: { crops: Crop[]; zoneOverrides?: Record<string, string> }) {
+  const suggestedZone = (r: { id: string; zone: ClimateZone }) =>
+    (CLIMATE_ZONES as readonly string[]).includes(zoneOverrides[r.id]) ? (zoneOverrides[r.id] as ClimateZone) : r.zone;
   const router = useRouter();
   const params = useSearchParams();
   const app = useAppData();
@@ -77,7 +79,7 @@ export function PlannerWizard({ crops }: { crops: Crop[] }) {
   const [step, setStep] = useState(0);
   const [country, setCountry] = useState(initialRegion.countryCode);
   const [regionId, setRegionId] = useState(initialRegion.id);
-  const [zone, setZone] = useState<ClimateZone>(saved?.zone ?? initialRegion.zone);
+  const [zone, setZone] = useState<ClimateZone>(saved?.zone ?? suggestedZone(initialRegion));
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(
     saved?.latitude != null && saved?.longitude != null ? { lat: saved.latitude, lon: saved.longitude } : null,
   );
@@ -123,7 +125,7 @@ export function PlannerWizard({ crops }: { crops: Crop[] }) {
         const r = nearestRegion(latitude, longitude);
         setCountry(r.countryCode);
         setRegionId(r.id);
-        setZone(r.zone);
+        setZone(suggestedZone(r));
         setCoords({ lat: Number(latitude.toFixed(4)), lon: Number(longitude.toFixed(4)) });
         setGeoState("idle");
         toast.success(`تم تحديد موقعك. أقرب مدينة في قائمتنا: ${r.name}`);
@@ -289,7 +291,7 @@ export function PlannerWizard({ crops }: { crops: Crop[] }) {
                     setCountry(e.target.value);
                     if (r) {
                       setRegionId(r.id);
-                      setZone(r.zone);
+                      setZone(suggestedZone(r));
                     }
                     setCoords(null);
                   }}
@@ -306,7 +308,7 @@ export function PlannerWizard({ crops }: { crops: Crop[] }) {
                   onChange={(e) => {
                     const r = findRegion(e.target.value);
                     setRegionId(e.target.value);
-                    if (r) setZone(r.zone);
+                    if (r) setZone(suggestedZone(r));
                     setCoords(null);
                   }}
                 >
@@ -343,7 +345,7 @@ export function PlannerWizard({ crops }: { crops: Crop[] }) {
                     <span>
                       <span className="block font-semibold">
                         {CLIMATE_ZONE_LABELS[z]}
-                        {region?.zone === z ? <Badge className="ms-2">مقترح لمدينتك</Badge> : null}
+                        {region && suggestedZone(region) === z ? <Badge className="ms-2">مقترح لمدينتك</Badge> : null}
                       </span>
                       <span className="block text-xs leading-6 text-muted-foreground">{CLIMATE_ZONE_DESCRIPTIONS[z]}</span>
                     </span>
