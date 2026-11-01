@@ -193,7 +193,10 @@ test.describe("what to plant now", () => {
     await page.clock.setFixedTime(new Date("2026-10-10T09:00:00+03:00"));
     await seedLocation(page, jericho);
     await go(page, "/");
-    await expect(page.getByRole("heading", { name: "ماذا أزرع الآن في منطقتي؟" })).toBeVisible();
-    await expect(page.getByText(/لـأريحا والأغوار/)).toBeVisible();
+    await expect(page.getByTestId("home-location-label")).toHaveText("أريحا والأغوار");
+    await expect(page.getByRole("heading", { name: "يُزرع الآن في منطقتك" })).toBeVisible();
+    await expect(page.getByTestId("home-now-context")).toContainText("لـأريحا والأغوار");
+    // Same engine as /recommendations: tomato is in season in the Jordan Valley in October.
+    await expect(page.getByTestId("home-now-tomato")).toContainText("مناسب الآن");
   });
 });

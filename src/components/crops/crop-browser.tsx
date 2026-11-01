@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useDeferredValue, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
@@ -13,8 +14,18 @@ import { CropCard } from "./crop-card";
 
 const EMPTY: CropFilters = { query: "", season: "", category: "", space: "", difficulty: "", zone: "" };
 
-export function CropBrowser({ crops }: { crops: Crop[] }) {
-  const [filters, setFilters] = useState<CropFilters>(EMPTY);
+/**
+ * Reads `?q=` (e.g. from the home page search). Render it inside <Suspense>
+ * with a plain <CropBrowser> as the fallback, so the static HTML still lists
+ * every crop.
+ */
+export function CropBrowserFromQuery({ crops }: { crops: Crop[] }) {
+  const q = (useSearchParams().get("q") ?? "").slice(0, 60);
+  return <CropBrowser key={q} crops={crops} initialQuery={q} />;
+}
+
+export function CropBrowser({ crops, initialQuery = "" }: { crops: Crop[]; initialQuery?: string }) {
+  const [filters, setFilters] = useState<CropFilters>(() => ({ ...EMPTY, query: initialQuery }));
   const [showFilters, setShowFilters] = useState(false);
   const deferred = useDeferredValue(filters);
   const results = useMemo(() => filterCrops(crops, deferred), [crops, deferred]);

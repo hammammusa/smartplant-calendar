@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/env";
-import { CropBrowser } from "@/components/crops/crop-browser";
+import { Suspense } from "react";
+import { CropBrowser, CropBrowserFromQuery } from "@/components/crops/crop-browser";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert } from "@/components/ui/feedback";
 import { getCrops } from "@/services/crops";
@@ -24,7 +25,9 @@ export default async function CropsPage() {
       <Alert tone="info" title="عن دقة المعلومات">
         البيانات الحالية أولية وعامة لبلاد الشام، ونوضح ذلك في كل محصول. تختلف النتائج حسب الصنف والتربة والارتفاع، لذا استعن بالإرشاد الزراعي في منطقتك عند الحاجة.
       </Alert>
-      <CropBrowser crops={crops} />
+      <Suspense fallback={<CropBrowser crops={crops} />}>
+        <CropBrowserFromQuery crops={crops} />
+      </Suspense>
     </div>
   );
 }
