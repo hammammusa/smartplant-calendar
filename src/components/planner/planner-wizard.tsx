@@ -33,7 +33,7 @@ import { Alert, Spinner } from "@/components/ui/feedback";
 import { Field, Input, Textarea } from "@/components/ui/form-controls";
 import { LocationPicker } from "@/components/location/location-picker";
 import { LocationSummary } from "@/components/location/location-summary";
-import { normalizeArabic } from "@/domain/crop-filter";
+import { searchCrops } from "@/domain/crop-search";
 import {
   CLIMATE_ZONE_DESCRIPTIONS,
   CLIMATE_ZONE_LABELS,
@@ -118,8 +118,7 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
   }, [selectedCrops, plantedOn, zone, space]);
 
   const visibleCrops = useMemo(() => {
-    const q = normalizeArabic(query);
-    return q ? crops.filter((c) => normalizeArabic([c.name, ...(c.otherNames ?? [])].join(" ")).includes(q)) : crops;
+    return query.trim() ? searchCrops(crops, query) : crops;
   }, [crops, query]);
 
   async function next() {
@@ -380,7 +379,7 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
                     ) : null}
                     <span className="flex flex-col gap-1 p-3">
                       <span className="font-bold">{c.name}</span>
-                      <span className="text-xs text-muted-foreground">{DIFFICULTY_LABELS[c.difficulty]}</span>
+                      {c.difficulty ? <span className="text-xs text-muted-foreground">{DIFFICULTY_LABELS[c.difficulty]}</span> : null}
                       {nowOk ? <span className="text-xs font-semibold text-brand-600">موسمه الآن في منطقتك</span> : null}
                       {!suitable ? <span className="text-xs font-semibold text-warning">غير مناسب عادةً لـ{SPACE_TYPE_LABELS[space!]}</span> : null}
                     </span>

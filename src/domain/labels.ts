@@ -71,6 +71,10 @@ export const CATEGORY_LABELS: Record<CropCategory, string> = {
   herb: "أعشاب عطرية",
   fruit: "فواكه",
   tree: "أشجار مثمرة",
+  legume: "بقوليات",
+  cereal: "حبوب",
+  forage: "أعلاف",
+  field_crop: "محاصيل حقلية",
 };
 
 export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
@@ -97,12 +101,14 @@ export const LIFE_CYCLE_LABELS: Record<LifeCycle, string> = {
 };
 
 export const METHOD_LABELS: Record<PlantingMethod, string> = {
-  direct_sowing: "بذر مباشر",
-  transplanting: "شتل",
+  direct_sowing: "بذر مباشر في الأرض",
+  transplanting: "نقل الأشتال إلى الأرض",
   tubers: "زراعة درنات",
   cloves: "زراعة فصوص",
   cuttings: "عُقَل أو جذامير",
   saplings: "غراس",
+  nursery_sowing: "بذر في المشتل أو الصواني",
+  offshoots: "فسائل أو خلفات",
 };
 
 export const SEASON_LABELS: Record<Season, string> = {
@@ -123,6 +129,7 @@ export const SEASON_MONTHS: Record<Season, number[]> = {
 export const DATA_STATUS_LABELS: Record<DataStatus, string> = {
   preliminary: "بيانات أولية إرشادية",
   reviewed: "مراجعة من مختص",
+  incomplete: "معلومات غير مكتملة",
 };
 
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {

@@ -146,15 +146,16 @@ export const adminCropSchema = z
       .trim()
       .regex(/^[a-z0-9-]{2,60}$/, { error: "المعرّف يجب أن يتكون من حروف لاتينية صغيرة وأرقام وشرطات فقط" }),
     name: z.string({ error: "أدخل اسم المحصول" }).trim().min(2, { error: "اسم المحصول قصير جدًا" }).max(60),
-    otherNames: z.array(z.string().trim().min(1).max(40)).max(10).default([]),
+    otherNames: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
     scientificName: z.string().trim().max(120).optional().default(""),
     category: z.enum(CROP_CATEGORIES, { error: "اختر التصنيف" }),
     lifeCycle: z.enum(LIFE_CYCLES),
-    difficulty: z.enum(DIFFICULTIES),
-    sun: z.enum(SUN_REQUIREMENTS),
-    water: z.enum(WATER_NEEDS),
+    difficulty: z.enum(DIFFICULTIES).nullable(),
+    sun: z.enum(SUN_REQUIREMENTS).nullable(),
+    water: z.enum(WATER_NEEDS).nullable(),
+    propagation: z.array(z.enum(PLANTING_METHODS)).max(PLANTING_METHODS.length).default([]),
     frostSensitive: z.boolean().default(false),
-    spaceTypes: z.array(z.enum(SPACE_TYPES)).min(1, { error: "اختر نوع مساحة واحدًا على الأقل" }),
+    spaceTypes: z.array(z.enum(SPACE_TYPES)),
     growthDaysMin: z.number().int().min(1).max(3650).nullable(),
     growthDaysMax: z.number().int().min(1).max(3650).nullable(),
     growthNote: z.string().trim().max(300).optional().default(""),
@@ -165,6 +166,14 @@ export const adminCropSchema = z
     dataStatus: z.enum(DATA_STATUSES),
     sourceNote: z.string().trim().max(600).optional().default(""),
     isPublished: z.boolean(),
+  })
+  .refine((v) => v.dataStatus === "incomplete" || v.spaceTypes.length > 0, {
+    error: "اختر نوع مساحة واحدًا على الأقل",
+    path: ["spaceTypes"],
+  })
+  .refine((v) => v.dataStatus === "incomplete" || (v.difficulty !== null && v.sun !== null && v.water !== null), {
+    error: "حدد الصعوبة والشمس والري، أو اختر «معلومات غير مكتملة» إن لم تتوفر بيانات موثوقة",
+    path: ["dataStatus"],
   })
   .refine(
     (v) => (v.growthDaysMin === null) === (v.growthDaysMax === null),

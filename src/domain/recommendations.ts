@@ -28,7 +28,7 @@ export const SOON_DAYS = 45;
 export const METHOD_GROUPS = {
   all: null,
   seeds: ["direct_sowing"],
-  seedlings: ["transplanting", "saplings", "cuttings"],
+  seedlings: ["nursery_sowing", "transplanting", "saplings", "cuttings", "offshoots"],
   tubers: ["tubers", "cloves"],
 } as const satisfies Record<string, readonly PlantingMethod[] | null>;
 export type MethodGroup = keyof typeof METHOD_GROUPS;
@@ -36,7 +36,7 @@ export type MethodGroup = keyof typeof METHOD_GROUPS;
 export const METHOD_GROUP_LABELS: Record<MethodGroup, string> = {
   all: "كل الطرق",
   seeds: "بذور (بذر مباشر)",
-  seedlings: "أشتال أو غراس أو عُقَل",
+  seedlings: "أشتال (المشتل والنقل) أو غراس أو عُقَل أو فسائل",
   tubers: "درنات أو فصوص",
 };
 

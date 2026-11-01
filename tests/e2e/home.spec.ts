@@ -49,7 +49,7 @@ test.describe("home page", () => {
     await search(page).fill("فريز");
     await expect(page.getByRole("option", { name: /الفراولة/ })).toBeVisible();
 
-    await search(page).fill("موز");
+    await search(page).fill("كيوي");
     await expect(page.getByText("لا يوجد محصول بهذا الاسم في الدليل بعد")).toBeVisible();
     await expect(page.getByRole("option")).toHaveCount(0);
 
@@ -102,4 +102,55 @@ test.describe("home page", () => {
       for (const h of heights) expect(h).toBeGreaterThanOrEqual(48);
     });
   }
+});
+
+test.describe("expanded crop catalogue", () => {
+  test("dialect names find the crop and the status is honest", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-10-10T09:00:00+03:00"));
+    await seedLocation(page, HEBRON);
+    await go(page, "/");
+    await search(page).fill("جبس");
+    const option = page.getByRole("option", { name: /البطيخ/ });
+    await expect(option).toContainText("(الجبس)");
+    await expect(option).toContainText("لا توجد معلومات موثوقة كافية");
+    await expect(option).toHaveAttribute("data-status", "no_data");
+
+    await search(page).fill("بندوره");
+    await expect(page.getByRole("option", { name: /البندورة/ })).toHaveAttribute("data-status", "later");
+    await expect(page.getByRole("option", { name: /البندورة/ })).toContainText("ليس وقته حاليًا");
+
+    // A typo still finds the crop.
+    await search(page).fill("ملوخيا");
+    await expect(page.getByRole("option", { name: /الملوخية/ })).toBeVisible();
+  });
+
+  test("an incomplete crop page says so and cannot be planned", async ({ page }) => {
+    await seedLocation(page, HEBRON);
+    await go(page, "/crops/okra/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("البامية");
+    await expect(page.getByText("معلومات غير مكتملة").first()).toBeVisible();
+    await expect(page.getByTestId("planting-status")).toHaveAttribute("data-status", "no_data");
+    await expect(page.getByRole("link", { name: /أنشئ خطة زراعة/ })).toHaveCount(0);
+    await expect(page.getByText("لا يمكن إنشاء خطة لهذا المحصول بعد")).toBeVisible();
+  });
+
+  test("the crop guide pages results and keeps the shared search", async ({ page }) => {
+    await go(page, "/crops/");
+    await expect(page.getByText(/^\d{3} محصولًا في الدليل$/)).toBeVisible();
+    await page.getByRole("button", { name: /عرض المزيد/ }).click();
+    await page.getByRole("searchbox", { name: "ابحث عن محصول" }).fill("فصة");
+    await expect(page.getByRole("link", { name: /البرسيم الحجازي/ })).toBeVisible();
+  });
+
+  test("Gaza and Jericho get their own status for the same crop", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-10-10T09:00:00+03:00"));
+    await seedLocation(page, { latitude: 31.8667, longitude: 35.45, label: "أريحا والأغوار", regionId: "ps-jericho", zone: "jordan_valley" });
+    await go(page, "/crops/tomato/");
+    await expect(page.getByTestId("planting-status")).toHaveAttribute("data-status", "now");
+    const gaza = await page.context().newPage();
+    await gaza.clock.setFixedTime(new Date("2026-10-10T09:00:00+03:00"));
+    await seedLocation(gaza, { latitude: 31.5017, longitude: 34.4668, label: "غزة", regionId: "ps-gaza", zone: "coastal" });
+    await go(gaza, "/crops/tomato/");
+    await expect(gaza.getByTestId("planting-status")).not.toHaveAttribute("data-status", "now");
+  });
 });

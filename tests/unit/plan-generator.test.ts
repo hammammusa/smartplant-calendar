@@ -1,3 +1,4 @@
+import { isPlannable } from "@/domain/crop-search";
 import { describe, expect, it } from "vitest";
 import { SEED_CROPS, findSeedCrop } from "@/data/crops";
 import { generatePlan, MAX_TASKS_PER_PLAN, adjustIntervalForSpace } from "@/domain/plan-generator";
@@ -97,8 +98,8 @@ describe("generatePlan", () => {
     expect(plan.tasks.length).toBe(MAX_TASKS_PER_PLAN);
   });
 
-  it("produces a valid plan for every seed crop in every zone", () => {
-    for (const crop of SEED_CROPS) {
+  it("produces a valid plan for every plannable seed crop in every zone", () => {
+    for (const crop of SEED_CROPS.filter(isPlannable)) {
       for (const zone of ["coastal", "highland", "inland_plain", "jordan_valley", "arid"] as const) {
         const plan = generatePlan({ crop, plantedOn: "2026-11-01", zone, spaceType: crop.spaceTypes[0] });
         expect(plan.tasks.length).toBeGreaterThan(2);

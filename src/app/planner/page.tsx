@@ -6,6 +6,7 @@ import { StorageNotice } from "@/components/layout/storage-notice";
 import { PlannerWizard } from "@/components/planner/planner-wizard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getRegionZoneOverrides } from "@/services/content";
+import { isPlannable } from "@/domain/crop-search";
 import { getCrops } from "@/services/crops";
 
 
@@ -26,7 +27,10 @@ export default async function PlannerPage() {
       />
       <StorageNotice />
       <Suspense fallback={<Skeleton className="h-[32rem] w-full rounded-2xl" />}>
-        <PlannerWizard crops={crops} zoneOverrides={zoneOverrides} />
+        <PlannerWizard
+          crops={crops.filter(isPlannable).map((c) => ({ ...c, guide: [], summary: "", sourceNote: "", wateringSummary: "" }))}
+          zoneOverrides={zoneOverrides}
+        />
       </Suspense>
     </div>
   );

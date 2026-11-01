@@ -1,5 +1,7 @@
-import type { ClimateZone, Crop, PlantingWindow, Season } from "./types";
-import { SEASON_MONTHS } from "./labels";
+import { addMonths, diffDays, parseISODate, toISODate } from "@/lib/dates";
+import type { ClimateZone, Crop, ISODate, PlantingMethod, PlantingWindow, Season } from "./types";
+import { monthName } from "@/lib/format";
+import { METHOD_LABELS, SEASON_MONTHS } from "./labels";
 
 /** True when `month` lies within a window that may wrap the year end. */
 export function monthInWindow(month: number, start: number, end: number): boolean {
@@ -43,4 +45,67 @@ export function cropMatchesSeason(crop: Pick<Crop, "windows">, season: Season, z
 
 export function cropPlantableInMonth(crop: Pick<Crop, "windows">, month: number, zone: ClimateZone): boolean {
   return windowsForZone(crop, zone).some((w) => monthInWindow(month, w.startMonth, w.endMonth));
+}
+
+/** Days in the "soon" range, shared with the recommendation engine. */
+export const SOON_WINDOW_DAYS = 45;
+
+export type SimpleStatusKind = "now" | "soon" | "later" | "no_data";
+
+export interface SimpleStatus {
+  kind: SimpleStatusKind;
+  /** Month the current window ends (now) or the next one starts (soon/later). */
+  month: number | null;
+  /** Methods open now (now) or in the next window (soon/later). */
+  methods: PlantingMethod[];
+}
+
+/**
+ * The four-way answer shown to farmers for one crop in one zone:
+ *  now     → «مناسب للزراعة الآن»
+ *  soon    → «يبدأ موسمه في <شهر>» (within about 45 days)
+ *  later   → «ليس وقته حاليًا»
+ *  no_data → «لا توجد معلومات موثوقة كافية»
+ * Uses the same rule as the recommendation engine (windows are month-level;
+ * "soon" = the next window opens within 45 days of `today`).
+ */
+export function simplePlantingStatus(crop: Pick<Crop, "windows">, zone: ClimateZone, today: ISODate): SimpleStatus {
+  const windows = windowsForZone(crop, zone);
+  if (windows.length === 0) return { kind: "no_data", month: null, methods: [] };
+  const { year, month } = parseISODate(today);
+  const open = windows.filter((w) => monthInWindow(month, w.startMonth, w.endMonth));
+  if (open.length) {
+    return { kind: "now", month: open[0].endMonth, methods: [...new Set(open.map((w) => w.method))] };
+  }
+  const ahead = (w: PlantingWindow) => (w.startMonth - month + 12) % 12 || 12;
+  const nextAhead = Math.min(...windows.map(ahead));
+  const next = windows.filter((w) => ahead(w) === nextAhead);
+  const days = diffDays(today, addMonths(toISODate(year, month, 1), nextAhead));
+  return {
+    kind: days <= SOON_WINDOW_DAYS ? "soon" : "later",
+    month: next[0].startMonth,
+    methods: [...new Set(next.map((w) => w.method))],
+  };
+}
+
+export const SIMPLE_STATUS_TITLES: Record<SimpleStatusKind, string> = {
+  now: "مناسب للزراعة الآن",
+  soon: "يقترب موسمه",
+  later: "ليس وقته حاليًا",
+  no_data: "لا توجد معلومات موثوقة كافية",
+};
+
+/** Short Arabic sentence for a simple status, e.g. «يبدأ موسمه في آذار». */
+export function describeSimpleStatus(status: SimpleStatus): { title: string; detail: string } {
+  const how = status.methods.map((m) => METHOD_LABELS[m]).join(" أو ");
+  switch (status.kind) {
+    case "now":
+      return { title: SIMPLE_STATUS_TITLES.now, detail: `${how} حتى ${monthName(status.month!)}` };
+    case "soon":
+      return { title: `يبدأ موسمه في ${monthName(status.month!)}`, detail: how };
+    case "later":
+      return { title: SIMPLE_STATUS_TITLES.later, detail: `يبدأ موسمه في ${monthName(status.month!)} (${how})` };
+    default:
+      return { title: SIMPLE_STATUS_TITLES.no_data, detail: "لم نوثّق موعد زراعته في منطقتك بعد" };
+  }
 }

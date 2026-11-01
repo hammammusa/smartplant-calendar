@@ -2,8 +2,8 @@ import { HomeHero } from "@/components/home/home-hero";
 import { HomeVisual } from "@/components/home/home-visual";
 import { MoreServices } from "@/components/home/more-services";
 import { PlantNow } from "@/components/home/plant-now";
-import type { SearchCrop } from "@/components/home/crop-search";
 import { getFaqs } from "@/services/content";
+import { listCrop } from "@/domain/crop-search";
 import { getCrops } from "@/services/crops";
 
 /** Real crops from the catalogue used as quick picks and examples. */
@@ -12,15 +12,8 @@ const EXAMPLES = ["tomato", "lettuce", "zaatar", "olive", "cucumber", "strawberr
 
 export default async function HomePage() {
   const [{ crops }, faqs] = await Promise.all([getCrops(), getFaqs()]);
-  const searchCrops: SearchCrop[] = crops.map(({ slug, name, otherNames, scientificName, imageUrl, imageAlt, windows }) => ({
-    slug,
-    name,
-    otherNames,
-    scientificName,
-    imageUrl,
-    imageAlt,
-    windows,
-  }));
+  // One shared, trimmed list: React serialises it once for both client components.
+  const homeCrops = crops.map(listCrop);
   const quick = QUICK.map((slug) => crops.find((c) => c.slug === slug))
     .filter((c) => c !== undefined)
     .map((c) => ({ slug: c.slug, name: c.name.replace(/^ال/, "") }));
@@ -36,7 +29,7 @@ export default async function HomePage() {
       {/* First screen: location, the question, search and the three main actions. */}
       <section aria-label="ابدأ من هنا" className="relative bg-gradient-to-b from-brand-50 via-background to-background">
         <div className="container-page grid grid-cols-1 items-center gap-8 pt-4 pb-8 sm:pt-10 sm:pb-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-12 lg:py-14">
-          <HomeHero crops={searchCrops} quick={quick} />
+          <HomeHero crops={homeCrops} quick={quick} />
           <HomeVisual className="home-enter hidden aspect-[5/4] lg:block" />
         </div>
       </section>
@@ -47,7 +40,7 @@ export default async function HomePage() {
           <h2 id="plant-now" className="text-2xl font-extrabold sm:text-3xl">يُزرع الآن في منطقتك</h2>
           <p className="text-sm text-muted-foreground">مواعيد أولية وعامة، وتختلف حسب الصنف والتربة والارتفاع.</p>
         </div>
-        <PlantNow crops={crops} examples={EXAMPLES} />
+        <PlantNow crops={homeCrops} examples={EXAMPLES} />
       </section>
 
       <div className="container-page pb-10 sm:pb-14 lg:hidden">

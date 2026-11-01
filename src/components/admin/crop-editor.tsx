@@ -57,9 +57,10 @@ function toCropForm(c: Crop | null, published: boolean): CropForm {
     scientificName: c?.scientificName ?? "",
     category: c?.category ?? "fruiting_vegetable",
     lifeCycle: c?.lifeCycle ?? "annual",
-    difficulty: c?.difficulty ?? "easy",
-    sun: c?.sun ?? "full_sun",
-    water: c?.water ?? "moderate",
+    difficulty: c ? c.difficulty : "easy",
+    sun: c ? c.sun : "full_sun",
+    water: c ? c.water : "moderate",
+    propagation: c?.propagation ?? [],
     frostSensitive: c?.frostSensitive ?? false,
     spaceTypes: c?.spaceTypes ?? ["home_garden"],
     growthDaysMin: c?.growthDaysMin ?? null,
@@ -175,17 +176,20 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
               </Select>
             </Field>
             <Field label="مستوى الصعوبة" htmlFor="difficulty">
-              <Select id="difficulty" {...form.register("difficulty")}>
+              <Select id="difficulty" {...form.register("difficulty", { setValueAs: (v) => v || null })}>
+                <option value="">غير موثّق بعد</option>
                 {DIFFICULTIES.map((c) => <option key={c} value={c}>{DIFFICULTY_LABELS[c]}</option>)}
               </Select>
             </Field>
             <Field label="احتياج الشمس" htmlFor="sun">
-              <Select id="sun" {...form.register("sun")}>
+              <Select id="sun" {...form.register("sun", { setValueAs: (v) => v || null })}>
+                <option value="">غير موثّق بعد</option>
                 {SUN_REQUIREMENTS.map((c) => <option key={c} value={c}>{SUN_LABELS[c]}</option>)}
               </Select>
             </Field>
             <Field label="احتياج الري" htmlFor="water">
-              <Select id="water" {...form.register("water")}>
+              <Select id="water" {...form.register("water", { setValueAs: (v) => v || null })}>
+                <option value="">غير موثّق بعد</option>
                 {WATER_NEEDS.map((c) => <option key={c} value={c}>{WATER_LABELS[c]}</option>)}
               </Select>
             </Field>

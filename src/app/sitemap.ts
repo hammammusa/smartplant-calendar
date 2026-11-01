@@ -15,6 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
   return [
     ...pages,
-    ...crops.map((c) => ({ url: absoluteUrl(`/crops/${c.slug}`), lastModified: now, changeFrequency: "monthly" as const, priority: 0.8 })),
+    // Name-only (incomplete) crop pages are not offered to search engines yet.
+    ...crops.filter((c) => c.dataStatus !== "incomplete").map((c) => ({ url: absoluteUrl(`/crops/${c.slug}`), lastModified: now, changeFrequency: "monthly" as const, priority: 0.8 })),
   ];
 }

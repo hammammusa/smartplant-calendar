@@ -12,6 +12,9 @@ import { CLIMATE_ZONES, CROP_CATEGORIES, DIFFICULTIES, SEASONS, SPACE_TYPES, typ
 import { formatNumber } from "@/lib/format";
 import { CropCard } from "./crop-card";
 
+/** Cards rendered at once; keeps the page light on phones with 100+ crops. */
+const PAGE = 24;
+
 const EMPTY: CropFilters = { query: "", season: "", category: "", space: "", difficulty: "", zone: "" };
 
 /**
@@ -27,10 +30,14 @@ export function CropBrowserFromQuery({ crops }: { crops: Crop[] }) {
 export function CropBrowser({ crops, initialQuery = "" }: { crops: Crop[]; initialQuery?: string }) {
   const [filters, setFilters] = useState<CropFilters>(() => ({ ...EMPTY, query: initialQuery }));
   const [showFilters, setShowFilters] = useState(false);
+  const [limit, setLimit] = useState(PAGE);
   const deferred = useDeferredValue(filters);
   const results = useMemo(() => filterCrops(crops, deferred), [crops, deferred]);
   const active = Object.entries(filters).filter(([k, v]) => k !== "query" && v).length;
-  const set = (patch: Partial<CropFilters>) => setFilters((f) => ({ ...f, ...patch }));
+  const set = (patch: Partial<CropFilters>) => {
+    setFilters((f) => ({ ...f, ...patch }));
+    setLimit(PAGE);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -125,11 +132,18 @@ export function CropBrowser({ crops, initialQuery = "" }: { crops: Crop[]; initi
           action={<Button variant="outline" onClick={() => setFilters(EMPTY)}>عرض كل المحاصيل</Button>}
         />
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {results.map((crop) => (
-            <CropCard key={crop.slug} crop={crop} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {results.slice(0, limit).map((crop) => (
+              <CropCard key={crop.slug} crop={crop} />
+            ))}
+          </div>
+          {results.length > limit ? (
+            <Button variant="outline" size="lg" className="self-center" onClick={() => setLimit((l) => l + PAGE)}>
+              عرض المزيد ({formatNumber(results.length - limit)} محصولًا آخر)
+            </Button>
+          ) : null}
+        </>
       )}
     </div>
   );

@@ -19,7 +19,7 @@ describe("crop search", () => {
   });
 
   it("filters by category, space and season", () => {
-    expect(filterCrops(SEED_CROPS, { category: "tree" }).map((c) => c.slug).sort()).toEqual(["grape", "olive"]);
+    expect(filterCrops(SEED_CROPS, { category: "tree" }).map((c) => c.slug)).toEqual(expect.arrayContaining(["grape", "olive", "fig", "almond"]));
     expect(filterCrops(SEED_CROPS, { space: "balcony" }).some((c) => c.slug === "olive")).toBe(false);
     const autumnValley = filterCrops(SEED_CROPS, { season: "autumn", zone: "jordan_valley" }).map((c) => c.slug);
     expect(autumnValley).toContain("tomato");

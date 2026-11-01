@@ -1,3 +1,29 @@
+-- Catalogue: seed applied twice (see run.sh) without duplicates.
+do $$
+begin
+  if (select count(*) from public.crops) < 100 then raise exception 'catalogue not seeded'; end if;
+  if (select count(*) from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.slug = 'tomato') <> 6 then
+    raise exception 'tomato windows duplicated or missing';
+  end if;
+  if (select count(*) from public.crop_task_templates t join public.crops c on c.id = t.crop_id where c.slug = 'tomato') <> 9 then
+    raise exception 'tomato task rules duplicated or missing';
+  end if;
+  if (select data_status from public.crops where slug = 'okra') <> 'incomplete' then raise exception 'okra should be incomplete'; end if;
+  if exists (select 1 from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.data_status = 'incomplete') then
+    raise exception 'incomplete crops must not have windows';
+  end if;
+  if not exists (select 1 from public.crops where slug = 'tomato' and 'الطماطة' = any(other_names)) then raise exception 'aliases not merged'; end if;
+  if (select cardinality(other_names) from public.crops where slug = 'tomato') <> cardinality(array(select distinct unnest(other_names) from public.crops where slug = 'tomato')) then
+    raise exception 'duplicate aliases';
+  end if;
+  -- Only incomplete crops may leave the agronomic fields empty.
+  begin
+    update public.crops set sun = null where slug = 'tomato';
+    raise exception 'complete crop accepted empty sun';
+  exception when check_violation then null;
+  end;
+end $$;
+
 -- RLS / permission tests. Each block raises an exception on failure.
 \set ON_ERROR_STOP on
 

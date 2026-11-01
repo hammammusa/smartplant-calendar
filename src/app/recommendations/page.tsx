@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { RecommendationsView } from "@/components/recommendations/recommendations-view";
 import { absoluteUrl } from "@/lib/env";
+import { listCrop } from "@/domain/crop-search";
 import { getCrops } from "@/services/crops";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export default async function RecommendationsPage() {
         title="ماذا أزرع الآن في منطقتي؟"
         description="نرتّب المحاصيل حسب مواعيد زراعتها المسجلة لمنطقتك المناخية وتاريخ اليوم، مع مراعاة نوع المساحة وتحذيرات الطقس القريبة."
       />
-      <RecommendationsView crops={crops} />
+      <RecommendationsView crops={crops.map(listCrop)} />
     </div>
   );
 }
