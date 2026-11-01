@@ -13,6 +13,7 @@ export interface CropRow {
   sun: Crop["sun"];
   water: Crop["water"];
   frost_sensitive?: boolean | null;
+  propagation?: Crop["propagation"] | null;
   space_types: Crop["spaceTypes"];
   growth_days_min: number | null;
   growth_days_max: number | null;
@@ -26,10 +27,13 @@ export interface CropRow {
   is_published?: boolean;
   crop_planting_windows?: {
     zone: PlantingWindow["zone"];
+    country_code?: string | null;
     start_month: number;
     end_month: number;
     method: PlantingWindow["method"];
     note: string | null;
+    source_id?: string | null;
+    source_detail?: string | null;
     sort_order: number;
   }[];
   crop_task_templates?: {
@@ -64,6 +68,7 @@ export function mapCropRow(row: CropRow): Crop {
     sun: row.sun,
     water: row.water,
     frostSensitive: row.frost_sensitive ?? false,
+    propagation: row.propagation?.length ? row.propagation : [...new Set((row.crop_planting_windows ?? []).map((w) => w.method))],
     spaceTypes: row.space_types ?? [],
     growthDaysMin: row.growth_days_min,
     growthDaysMax: row.growth_days_max,
@@ -75,11 +80,14 @@ export function mapCropRow(row: CropRow): Crop {
     dataStatus: row.data_status,
     sourceNote: row.source_note ?? "",
     windows: [...(row.crop_planting_windows ?? [])].sort(bySort).map((w) => ({
-      zone: w.zone,
+      zone: w.zone ?? null,
+      countryCode: w.country_code ?? undefined,
       startMonth: w.start_month,
       endMonth: w.end_month,
       method: w.method,
       note: w.note ?? undefined,
+      sourceId: w.source_id ?? undefined,
+      sourceDetail: w.source_detail ?? undefined,
     })),
     templates: [...(row.crop_task_templates ?? [])].sort(bySort).map((t) => ({
       key: t.key,

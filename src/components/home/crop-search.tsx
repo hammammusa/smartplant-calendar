@@ -1,16 +1,16 @@
 "use client";
 
-import { ArrowLeft, CalendarCheck2, MapPin, Search, SearchX, X } from "lucide-react";
+import { ArrowLeft, MapPin, Search, SearchX, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDeferredValue, useId, useMemo, useState } from "react";
 import { CropImage } from "@/components/brand/crop-image";
 import { useAppData } from "@/components/providers/app-data-provider";
-import { filterCrops } from "@/domain/crop-filter";
-import { CLIMATE_ZONE_LABELS } from "@/domain/labels";
-import { cropPlantableInMonth, windowsForZone } from "@/domain/planting-windows";
+import { ambiguityFor } from "@/domain/ambiguous-names";
+import { buildCropIndex, normalizeArabic, searchCropIndex } from "@/domain/crop-search";
+import { countryOfLocation } from "@/domain/location";
+import { describeSimpleStatus, simplePlantingStatus, windowsForZone, type SimpleStatusKind } from "@/domain/planting-windows";
 import type { ClimateZone, Crop } from "@/domain/types";
-import { monthOf } from "@/lib/dates";
 import { formatMonthRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -20,9 +20,23 @@ export type SearchCrop = Pick<Crop, "slug" | "name" | "otherNames" | "scientific
 const MAX_RESULTS = 6;
 
 /** Distinct month ranges of a crop's windows for one zone, e.g. "آذار – أيار، أيلول – تشرين الأول". */
-function windowText(crop: SearchCrop, zone: ClimateZone): string | null {
-  const ranges = [...new Set(windowsForZone(crop, zone).map((w) => formatMonthRange(w.startMonth, w.endMonth)))];
+function windowText(crop: SearchCrop, zone: ClimateZone, country: string | null): string | null {
+  const ranges = [...new Set(windowsForZone(crop, zone, country).map((w) => formatMonthRange(w.startMonth, w.endMonth)))];
   return ranges.length ? ranges.join("، ") : null;
+}
+
+const STATUS_TONE: Record<SimpleStatusKind, string> = {
+  now: "bg-brand-100 text-brand-700",
+  soon: "bg-info-soft text-info",
+  later: "bg-surface-muted text-muted-foreground",
+  no_data: "border border-dashed border-border-strong text-muted-foreground",
+};
+
+/** The dialect/other name that matched, e.g. «الجبس» for البطيخ. */
+function matchedAlias(crop: SearchCrop, query: string): string | null {
+  const q = normalizeArabic(query);
+  if (!q || normalizeArabic(crop.name).includes(q)) return null;
+  return crop.otherNames?.find((n) => normalizeArabic(n).includes(q)) ?? null;
 }
 
 /**
@@ -39,13 +53,12 @@ export function CropSearch({ crops, ref }: { crops: SearchCrop[]; ref?: React.Re
   const listId = useId();
   const hintId = useId();
 
-  const results = useMemo(
-    () => (deferred.trim() ? filterCrops(crops as Crop[], { query: deferred }).slice(0, MAX_RESULTS) : []),
-    [crops, deferred],
-  );
+  const index = useMemo(() => buildCropIndex(crops), [crops]);
+  const ambiguous = ambiguityFor(deferred);
+  const results = useMemo(() => (deferred.trim() ? searchCropIndex(index, deferred, MAX_RESULTS) : []), [index, deferred]);
   const showList = open && query.trim().length > 0;
   const zone = mode !== "loading" ? location?.zone ?? null : null;
-  const month = monthOf(today);
+  const country = countryOfLocation(location);
 
   const goTo = (slug: string) => {
     setOpen(false);
@@ -152,16 +165,24 @@ export function CropSearch({ crops, ref }: { crops: SearchCrop[]; ref?: React.Re
           className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-border bg-surface shadow-lg animate-fade-in"
           onMouseDown={(e) => e.preventDefault()}
         >
+          {ambiguous ? (
+            <p className="border-b border-border bg-info-soft px-4 py-2.5 text-sm font-bold text-info" data-testid="ambiguous-name">
+              «{ambiguous.name}» اسم لأكثر من محصول. اختر المقصود:
+            </p>
+          ) : null}
           <ul id={listId} role="listbox" aria-label="نتائج البحث" className="max-h-[min(60vh,26rem)] overflow-y-auto p-1.5">
             {results.map((crop, i) => {
-              const months = zone ? windowText(crop, zone) : null;
-              const nowOk = zone ? cropPlantableInMonth(crop, month, zone) : false;
+              const hint = ambiguous?.options.find((o) => o.slug === crop.slug)?.hint;
+              const months = zone ? windowText(crop, zone, country) : null;
+              const status = zone ? simplePlantingStatus(crop, zone, today, country) : null;
+              const alias = matchedAlias(crop, deferred);
               return (
                 <li
                   key={crop.slug}
                   id={`${listId}-${i}`}
                   role="option"
                   aria-selected={i === active}
+                  data-status={status?.kind ?? "no_location"}
                   onClick={() => goTo(crop.slug)}
                   onMouseEnter={() => setActive(i)}
                   className={cn(
@@ -171,25 +192,24 @@ export function CropSearch({ crops, ref }: { crops: SearchCrop[]; ref?: React.Re
                 >
                   <CropImage crop={crop} className="size-14 shrink-0 rounded-xl" sizes="56px" />
                   <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-x-2 text-lg font-bold">
+                    <p className="text-lg font-bold">
                       {crop.name}
-                      {nowOk ? (
-                        <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-bold text-brand-700">موعده الآن</span>
-                      ) : null}
+                      {alias ? <span className="ms-1.5 text-sm font-semibold text-muted-foreground">({alias})</span> : null}
                     </p>
-                    <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                      {zone ? (
-                        <>
-                          <CalendarCheck2 className="mt-1 size-4 shrink-0 text-brand-600" aria-hidden />
-                          <span>{months ? `يُزرع: ${months}` : `لا تتوفر مواعيد لمنطقة ${CLIMATE_ZONE_LABELS[zone]} بعد`}</span>
-                        </>
-                      ) : (
-                        <>
-                          <MapPin className="mt-1 size-4 shrink-0 text-subtle-foreground" aria-hidden />
-                          <span>افتح المحصول لترى مواعيده، أو حدّد منطقتك</span>
-                        </>
-                      )}
-                    </p>
+                    {hint ? <p className="text-sm font-semibold text-foreground">{hint}</p> : null}
+                    {status ? (
+                      <>
+                        <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-bold", status.general && status.kind === "now" ? "bg-warning-soft text-warning" : STATUS_TONE[status.kind])}>
+                          {describeSimpleStatus(status).title}
+                        </span>
+                        {months ? <p className="text-sm text-muted-foreground">يُزرع: {months}</p> : null}
+                      </>
+                    ) : (
+                      <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                        <MapPin className="mt-1 size-4 shrink-0 text-subtle-foreground" aria-hidden />
+                        <span>حدّد منطقتك لمعرفة موعد زراعته</span>
+                      </p>
+                    )}
                   </div>
                   <ArrowLeft className="size-5 shrink-0 text-subtle-foreground" aria-hidden />
                 </li>

@@ -24,4 +24,6 @@ for f in "$ROOT"/supabase/migrations/*.sql; do
   "${PSQL[@]}" -f "$f"
 done
 "${PSQL[@]}" -f "$ROOT/supabase/seed.sql"
+# The seed must be safe to re-run: no duplicate crops, windows or tasks.
+"${PSQL[@]}" -f "$ROOT/supabase/seed.sql"
 "${PSQL[@]}" -f "$ROOT/tests/db/rls.test.sql"

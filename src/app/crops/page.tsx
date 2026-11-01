@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { CropBrowser, CropBrowserFromQuery } from "@/components/crops/crop-browser";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert } from "@/components/ui/feedback";
+import { listCrop } from "@/domain/crop-search";
 import { getCrops } from "@/services/crops";
 
 
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CropsPage() {
-  const { crops } = await getCrops();
+  const crops = (await getCrops()).crops.map(listCrop);
   return (
     <div className="container-page flex flex-col gap-8 py-10 sm:py-14">
       <PageHeader
@@ -23,7 +24,7 @@ export default async function CropsPage() {
         description="ابحث في المحاصيل وصفِّها حسب الموسم والمنطقة ونوع المساحة ومستوى الصعوبة، ثم افتح أي محصول لمعرفة طريقة زراعته والعناية به."
       />
       <Alert tone="info" title="عن دقة المعلومات">
-        البيانات الحالية أولية وعامة لبلاد الشام، ونوضح ذلك في كل محصول. تختلف النتائج حسب الصنف والتربة والارتفاع، لذا استعن بالإرشاد الزراعي في منطقتك عند الحاجة.
+        البيانات الحالية أولية وعامة لبلاد الشام، ونوضح ذلك في كل محصول. بعض المحاصيل مدرجة بالاسم فقط («معلومات غير مكتملة») إلى أن نوثّق مواعيدها من مصدر موثوق، ولا نعرض لها موعدًا تقديريًا. استعن بالإرشاد الزراعي في منطقتك عند الحاجة.
       </Alert>
       <Suspense fallback={<CropBrowser crops={crops} />}>
         <CropBrowserFromQuery crops={crops} />

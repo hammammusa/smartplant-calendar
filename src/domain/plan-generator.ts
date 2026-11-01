@@ -7,14 +7,16 @@
 import { addDays, monthOf } from "@/lib/dates";
 import { formatShortDate } from "@/lib/format";
 import { CONTAINER_SPACES, GREENHOUSE_NOTICE, SPACES_WITHOUT_RULES, SPACE_TYPE_LABELS } from "./labels";
-import { evaluateWindowFit, type WindowFit } from "./planting-windows";
-import type { ClimateZone, Crop, ISODate, SpaceType, TaskType } from "./types";
+import { evaluateWindowFit, isGeneralOnly, windowsForZone, type WindowFit } from "./planting-windows";
+import type { ClimateZone, Crop, ISODate, PlantingMethod, SpaceType, TaskTemplate, TaskType } from "./types";
 
 export interface PlanInput {
   crop: Crop;
   plantedOn: ISODate;
   zone: ClimateZone;
   spaceType: SpaceType;
+  /** ISO country of the garden; windows scoped to another country are ignored. */
+  country?: string | null;
 }
 
 export interface GeneratedTask {
@@ -45,13 +47,74 @@ export function adjustIntervalForSpace(interval: number, type: TaskType, spaceTy
   return Math.max(1, Math.round(interval * 0.6));
 }
 
+const PLANT_TITLE: Record<PlantingMethod, (name: string) => string> = {
+  direct_sowing: (n) => `بذر ${n} في الأرض`,
+  nursery_sowing: (n) => `بذر ${n} في المشتل أو الصواني`,
+  transplanting: (n) => `نقل أشتال ${n} إلى الأرض`,
+  tubers: (n) => `زراعة درنات ${n}`,
+  cloves: (n) => `زراعة فصوص ${n}`,
+  cuttings: (n) => `زراعة عُقَل ${n}`,
+  saplings: (n) => `زراعة غراس ${n}`,
+  offshoots: (n) => `زراعة فسائل ${n}`,
+};
+
+/**
+ * General tasks for crops that have documented planting windows but no
+ * crop-specific task rules yet. They contain nothing crop-specific beyond the
+ * planting method of the zone: no fertiliser doses, no harvest date.
+ */
+export function genericTemplates(crop: Pick<Crop, "name" | "windows">, zone: ClimateZone, country?: string | null): TaskTemplate[] {
+  const method = windowsForZone(crop, zone, country)[0]?.method ?? crop.windows[0]?.method ?? "direct_sowing";
+  return [
+    {
+      key: "generic-soil",
+      type: "soil_prep",
+      offsetDays: -7,
+      title: `تجهيز التربة لـ${crop.name}`,
+      description: "نظّف المكان من الأعشاب، واقلب التربة وأضف سمادًا عضويًا متحللًا، وتأكد من تصريف الماء. هذه مهمة عامة وليست توصية خاصة بالمحصول.",
+    },
+    {
+      key: "generic-plant",
+      type: "planting",
+      offsetDays: 0,
+      title: PLANT_TITLE[method](crop.name),
+      description: "الموعد حسب التاريخ الذي اخترته. راجع مصدر المواعيد في صفحة المحصول.",
+    },
+    {
+      key: "generic-water",
+      type: "irrigation",
+      offsetDays: 2,
+      repeatEveryDays: 3,
+      untilOffsetDays: 60,
+      title: `متابعة رطوبة التربة لـ${crop.name}`,
+      description:
+        "إن كانت زراعتك مروية: افحص رطوبة التربة بإصبعك على عمق 3–5 سم، واروِ عند جفافها فقط. في الزراعة البعلية تعتمد على المطر، فتجاوز المهمة. تجاوزها أيضًا إن هطلت أمطار كافية.",
+    },
+    {
+      key: "generic-pests",
+      type: "pest_check",
+      offsetDays: 14,
+      repeatEveryDays: 7,
+      untilOffsetDays: 60,
+      title: `تفقّد ${crop.name}`,
+      description: "افحص الأوراق من الجهتين بحثًا عن حشرات أو بقع، واسأل المرشد الزراعي عند الشك.",
+    },
+  ];
+}
+
 export function generatePlan(input: PlanInput): GeneratedPlan {
   const { crop, plantedOn, zone, spaceType } = input;
   const tasks: GeneratedTask[] = [];
   const warnings: string[] = [];
   const containerSpace = CONTAINER_SPACES.includes(spaceType);
 
-  for (const t of crop.templates) {
+  const generic = crop.templates.length === 0;
+  const templates = generic ? genericTemplates(crop, zone, input.country) : crop.templates;
+  if (generic) {
+    warnings.push("لا تتوفر بعد قواعد مهام خاصة بهذا المحصول، لذلك تتضمن الخطة مهام عامة فقط: تجهيز التربة والزراعة ومتابعة الرطوبة والتفقد.");
+  }
+
+  for (const t of templates) {
     const base = {
       templateKey: t.key,
       type: t.type,
@@ -99,7 +162,10 @@ export function generatePlan(input: PlanInput): GeneratedPlan {
     );
   }
 
-  const windowFit = evaluateWindowFit(crop, zone, monthOf(plantedOn));
+  const windowFit = evaluateWindowFit(crop, zone, monthOf(plantedOn), input.country);
+  if (isGeneralOnly(windowsForZone(crop, zone, input.country))) {
+    warnings.push("مواعيد هذا المحصول عامة على مستوى البلد وليست خاصة بمنطقتك المناخية؛ تأكد من الإرشاد الزراعي المحلي.");
+  }
   if (windowFit === "outside_window") {
     warnings.push(
       "تاريخ الزراعة المختار يقع خارج المواعيد الأولية المقترحة لمنطقتك المناخية. قد يتأثر النبات بالحرارة أو البرودة؛ راجع المواعيد المقترحة أو استشر مرشدًا زراعيًا محليًا.",
@@ -112,6 +178,8 @@ export function generatePlan(input: PlanInput): GeneratedPlan {
 
   if (SPACES_WITHOUT_RULES.includes(spaceType)) {
     warnings.push(GREENHOUSE_NOTICE);
+  } else if (crop.spaceTypes.length === 0) {
+    warnings.push("لم نوثّق بعد أنواع المساحات المناسبة لهذا المحصول.");
   } else if (!crop.spaceTypes.includes(spaceType)) {
     warnings.push(
       `لا يُعد هذا المحصول مناسبًا عادةً لـ«${SPACE_TYPE_LABELS[spaceType]}». يمكنك المتابعة، لكن النتائج قد تكون محدودة.`,

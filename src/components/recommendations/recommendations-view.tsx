@@ -21,6 +21,7 @@ import {
   type Recommendation,
   type RecommendationStatus,
 } from "@/domain/recommendations";
+import { countryOfLocation } from "@/domain/location";
 import { SPACE_TYPES, type Crop, type SpaceType } from "@/domain/types";
 import { isValidISODate } from "@/lib/dates";
 import { formatDate, formatMonthRange, formatNumber } from "@/lib/format";
@@ -31,7 +32,7 @@ const STATUS_META: Record<RecommendationStatus, { title: string; badge: string; 
   protect: { title: "في موعده لكن يحتاج حماية أو ظروفًا خاصة", badge: "يحتاج حماية", variant: "warning", icon: ShieldAlert },
   soon: { title: "يقترب موعد زراعته", badge: "قريبًا", variant: "info", icon: CalendarClock },
   later: { title: "غير مناسب حاليًا", badge: "ليس موعده", variant: "neutral", icon: Info },
-  no_data: { title: "لا تتوفر مواعيد لمنطقتك", badge: "بلا بيانات", variant: "outline", icon: Info },
+  no_data: { title: "لا توجد معلومات موثوقة كافية لمنطقتك", badge: "لا معلومات كافية", variant: "outline", icon: Info },
 };
 
 const PREFS_KEY = "smartplant:recommendation-prefs:v1";
@@ -69,12 +70,17 @@ export function RecommendationCard({ r, space }: { r: Recommendation; space: Spa
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-bold">{r.crop.name}</h3>
-            <Badge variant={meta.variant}>{meta.badge}</Badge>
+            {r.general && r.status === "now" ? (
+              <Badge variant="warning">ضمن الموعد العام</Badge>
+            ) : (
+              <Badge variant={meta.variant}>{meta.badge}</Badge>
+            )}
+            {r.general ? <Badge variant="outline">موعد عام لا يخص منطقتك</Badge> : null}
           </div>
           {r.method ? <p className="text-sm text-muted-foreground">الطريقة المقترحة: {METHOD_LABELS[r.method]}</p> : null}
           {r.windows.length ? (
             <p className="text-sm">
-              <span className="text-muted-foreground">فترات الزراعة المسجلة لمنطقتك: </span>
+              <span className="text-muted-foreground">{r.general ? "فترات الزراعة العامة المسجلة: " : "فترات الزراعة المسجلة لمنطقتك: "}</span>
               <span className="font-semibold text-brand-700">
                 {r.windows.map((w) => `${formatMonthRange(w.startMonth, w.endMonth)} (${METHOD_LABELS[w.method]})`).join("، ")}
               </span>
@@ -139,7 +145,7 @@ export function RecommendationsView({ crops, compact = false }: { crops: Crop[];
   );
 
   const result = useMemo(
-    () => (location ? recommendCrops({ crops, today: date, zone: location.zone, spaceType: current.space, methodGroup: current.method, alerts }) : null),
+    () => (location ? recommendCrops({ crops, today: date, zone: location.zone, spaceType: current.space, methodGroup: current.method, alerts, country: countryOfLocation(location) }) : null),
     [crops, date, location, current.space, current.method, alerts],
   );
 
@@ -253,7 +259,27 @@ export function RecommendationsView({ crops, compact = false }: { crops: Crop[];
       ) : null}
 
       {groups.map((g) =>
-        result.groups[g].length ? (
+        g === "no_data" && result.groups[g].length ? (
+          <details key={g} className="group rounded-2xl border border-border bg-surface p-4" data-testid="rec-no-data">
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-lg font-extrabold text-muted-foreground [&::-webkit-details-marker]:hidden">
+              <Info className="size-5" aria-hidden />
+              {STATUS_META[g].title} ({formatNumber(result.groups[g].length)})
+              <span className="ms-auto text-sm font-semibold text-brand-700 group-open:hidden">عرض الأسماء</span>
+            </summary>
+            <p className="mt-2 text-sm text-muted-foreground">
+              لم نوثّق بعد مواعيد زراعة هذه المحاصيل في منطقتك، ولن نقترح لها موعدًا دون مصدر. افتح المحصول لمعرفة المتوفر عنه.
+            </p>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {result.groups[g].map((r) => (
+                <li key={r.crop.slug}>
+                  <Link href={`/crops/${r.crop.slug}`} data-testid={`rec-${r.crop.slug}`} data-status={r.status} className="inline-flex h-9 items-center rounded-full border border-border px-3 text-sm font-semibold hover:bg-surface-muted">
+                    {r.crop.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : result.groups[g].length ? (
           <section key={g} aria-labelledby={`grp-${g}`} className="flex flex-col gap-3">
             <h2 id={`grp-${g}`} className={cn("flex items-center gap-2 text-xl font-extrabold", g === "later" || g === "no_data" ? "text-muted-foreground" : "")}>
               {(() => {

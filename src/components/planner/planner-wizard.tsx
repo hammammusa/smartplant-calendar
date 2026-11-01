@@ -33,7 +33,7 @@ import { Alert, Spinner } from "@/components/ui/feedback";
 import { Field, Input, Textarea } from "@/components/ui/form-controls";
 import { LocationPicker } from "@/components/location/location-picker";
 import { LocationSummary } from "@/components/location/location-summary";
-import { normalizeArabic } from "@/domain/crop-filter";
+import { searchCrops } from "@/domain/crop-search";
 import {
   CLIMATE_ZONE_DESCRIPTIONS,
   CLIMATE_ZONE_LABELS,
@@ -43,6 +43,7 @@ import {
   TASK_TYPE_LABELS,
 } from "@/domain/labels";
 import { generatePlan } from "@/domain/plan-generator";
+import { countryOfLocation } from "@/domain/location";
 import { windowsForZone } from "@/domain/planting-windows";
 import { isValidISODate, monthOf } from "@/lib/dates";
 import { formatDate, formatMonthRange, formatNumber, monthName } from "@/lib/format";
@@ -84,6 +85,7 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
   const params = useSearchParams();
   const app = useAppData();
   const saved = app.location;
+  const country = countryOfLocation(saved);
 
   const [step, setStep] = useState(0);
   // The confirmed location decides the default zone; the user can still pick another zone for this plan.
@@ -114,12 +116,11 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
 
   const plans = useMemo(() => {
     if (!space || !isValidISODate(plantedOn)) return [];
-    return selectedCrops.map((crop) => ({ crop, plan: generatePlan({ crop, plantedOn, zone, spaceType: space }) }));
-  }, [selectedCrops, plantedOn, zone, space]);
+    return selectedCrops.map((crop) => ({ crop, plan: generatePlan({ crop, plantedOn, zone, spaceType: space, country }) }));
+  }, [selectedCrops, plantedOn, zone, space, country]);
 
   const visibleCrops = useMemo(() => {
-    const q = normalizeArabic(query);
-    return q ? crops.filter((c) => normalizeArabic([c.name, ...(c.otherNames ?? [])].join(" ")).includes(q)) : crops;
+    return query.trim() ? searchCrops(crops, query) : crops;
   }, [crops, query]);
 
   async function next() {
@@ -356,8 +357,8 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
               {visibleCrops.map((c) => {
                 const active = selected.includes(c.slug);
                 const thisMonth = monthOf(app.today);
-                const ws = windowsForZone(c, zone);
-                const suitable = space ? c.spaceTypes.includes(space) : true;
+                const ws = windowsForZone(c, zone, country);
+                const suitable = space ? c.spaceTypes.length === 0 || c.spaceTypes.includes(space) : true;
                 const nowOk = ws.some((w) => (w.startMonth <= w.endMonth ? thisMonth >= w.startMonth && thisMonth <= w.endMonth : thisMonth >= w.startMonth || thisMonth <= w.endMonth));
                 return (
                   <button
@@ -380,7 +381,7 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
                     ) : null}
                     <span className="flex flex-col gap-1 p-3">
                       <span className="font-bold">{c.name}</span>
-                      <span className="text-xs text-muted-foreground">{DIFFICULTY_LABELS[c.difficulty]}</span>
+                      {c.difficulty ? <span className="text-xs text-muted-foreground">{DIFFICULTY_LABELS[c.difficulty]}</span> : null}
                       {nowOk ? <span className="text-xs font-semibold text-brand-600">موسمه الآن في منطقتك</span> : null}
                       {!suitable ? <span className="text-xs font-semibold text-warning">غير مناسب عادةً لـ{SPACE_TYPE_LABELS[space!]}</span> : null}
                     </span>
@@ -424,7 +425,7 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
               <ul className="flex flex-col gap-2">
                 {selectedCrops.map((c) => {
                   const fit = plans.find((p) => p.crop.slug === c.slug)?.plan.windowFit;
-                  const ws = windowsForZone(c, zone);
+                  const ws = windowsForZone(c, zone, country);
                   return (
                     <li key={c.slug} className={cn("rounded-xl border p-3 text-sm", fit === "in_window" ? "border-success/20 bg-success-soft" : "border-warning-border bg-warning-soft")}>
                       <span className="font-bold">{c.name}: </span>

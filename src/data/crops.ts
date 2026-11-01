@@ -9,6 +9,7 @@
  * generated from this file by `npm run db:seed:generate`).
  */
 import type { Crop, TaskTemplate, TaskType } from "@/domain/types";
+import { CATALOGUE_CROPS } from "./crop-catalogue";
 
 const SOURCE_NOTE =
   "معلومات عامة أولية مجمّعة من الممارسات الزراعية الشائعة في بلاد الشام، ولم تُراجع بعد من مهندس زراعي. تختلف النتائج حسب الصنف والتربة والمناخ المحلي، لذا استشر الإرشاد الزراعي في منطقتك.";
@@ -36,12 +37,13 @@ function every(
 /** Dry season months in the Levant, used to limit irrigation tasks for trees. */
 const DRY_MONTHS = [5, 6, 7, 8, 9, 10];
 
-export const SEED_CROPS: Crop[] = [
+/** The 12 crops with full (preliminary, unsourced) guidance, windows and task rules. */
+const DETAILED_CROPS: Crop[] = [
   {
     id: "seed-tomato",
     slug: "tomato",
     name: "البندورة",
-    otherNames: ["الطماطم"],
+    otherNames: ["الطماطم", "الطماطة", "البندورة البلدية"],
     scientificName: "Solanum lycopersicum",
     category: "fruiting_vegetable",
     lifeCycle: "annual",
@@ -91,6 +93,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-cucumber",
     slug: "cucumber",
     name: "الخيار",
+    otherNames: ["الخيار البلدي", "خيار الأكل"],
     scientificName: "Cucumis sativus",
     category: "fruiting_vegetable",
     lifeCycle: "annual",
@@ -140,7 +143,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-potato",
     slug: "potato",
     name: "البطاطا",
-    otherNames: ["البطاطس"],
+    otherNames: ["البطاطس", "البطاطا البلدية"],
     scientificName: "Solanum tuberosum",
     category: "root_tuber",
     lifeCycle: "annual",
@@ -191,6 +194,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-onion",
     slug: "onion",
     name: "البصل",
+    otherNames: ["البصل الأخضر", "البصل الأحمر", "البصل الأبيض"],
     scientificName: "Allium cepa",
     category: "bulb",
     lifeCycle: "annual",
@@ -239,6 +243,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-garlic",
     slug: "garlic",
     name: "الثوم",
+    otherNames: ["التوم", "الثوم البلدي", "الثوم الأخضر"],
     scientificName: "Allium sativum",
     category: "bulb",
     lifeCycle: "annual",
@@ -286,6 +291,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-lettuce",
     slug: "lettuce",
     name: "الخس",
+    otherNames: ["الخسة", "الخس البلدي", "الخس الأمريكي"],
     scientificName: "Lactuca sativa",
     category: "leafy_vegetable",
     lifeCycle: "annual",
@@ -333,6 +339,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-pepper",
     slug: "pepper",
     name: "الفلفل",
+    otherNames: ["الفليفلة", "الفلفل الحلو", "الفلفل الحار", "الشطة", "الفلفل الأخضر"],
     scientificName: "Capsicum annuum",
     category: "fruiting_vegetable",
     lifeCycle: "annual",
@@ -381,6 +388,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-mint",
     slug: "mint",
     name: "النعناع",
+    otherNames: ["النعنع", "النعنع البلدي"],
     scientificName: "Mentha spp.",
     category: "herb",
     lifeCycle: "perennial",
@@ -429,7 +437,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-zaatar",
     slug: "zaatar",
     name: "الزعتر",
-    otherNames: ["الزعتر البلدي", "الزوفا"],
+    otherNames: ["الزعتر البلدي", "الزوفا", "الزعتر الأخضر"],
     scientificName: "Origanum syriacum",
     category: "herb",
     lifeCycle: "perennial",
@@ -477,7 +485,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-strawberry",
     slug: "strawberry",
     name: "الفراولة",
-    otherNames: ["الفريز"],
+    otherNames: ["الفريز", "الفراولة البلدية"],
     scientificName: "Fragaria × ananassa",
     category: "fruit",
     lifeCycle: "perennial",
@@ -525,6 +533,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-olive",
     slug: "olive",
     name: "الزيتون",
+    otherNames: ["شجرة الزيتون", "الزيتون البلدي", "الزيتون النبالي"],
     scientificName: "Olea europaea",
     category: "tree",
     lifeCycle: "perennial",
@@ -571,7 +580,7 @@ export const SEED_CROPS: Crop[] = [
     id: "seed-grape",
     slug: "grape",
     name: "العنب",
-    otherNames: ["الدوالي"],
+    otherNames: ["الدوالي", "الكرمة", "ورق العنب", "العريشة"],
     scientificName: "Vitis vinifera",
     category: "tree",
     lifeCycle: "perennial",
@@ -614,6 +623,16 @@ export const SEED_CROPS: Crop[] = [
       { section: "problems", title: "المشكلات الشائعة", body: "البياض الدقيقي، والبياض الزغبي، وحشرات البق الدقيقي، وتعفن العناقيد في الرطوبة." },
     ],
   },
+];
+
+/**
+ * Every crop the app knows: the detailed ones first, then the catalogue
+ * entries (names only, no planting data yet). `propagation` of the detailed
+ * crops is derived from their own windows.
+ */
+export const SEED_CROPS: Crop[] = [
+  ...DETAILED_CROPS.map((c) => ({ ...c, propagation: c.propagation ?? [...new Set(c.windows.map((w) => w.method))] })),
+  ...CATALOGUE_CROPS,
 ];
 
 export function findSeedCrop(slug: string): Crop | undefined {

@@ -38,7 +38,7 @@ test("guest can plan a crop and manage tasks in the calendar", async ({ page, is
   // Browse and search crops.
   await go(page, "/crops");
   await page.getByRole("searchbox", { name: "ابحث عن محصول" }).fill("بندوره");
-  await expect(page.getByText("1 من 12 محصولًا")).toBeVisible();
+  await expect(page.getByText(/^1 من \d+ محصولًا$/)).toBeVisible();
   await page.getByRole("link", { name: /البندورة/ }).first().click();
   await expect(page).toHaveURL(/\/crops\/tomato/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("البندورة");

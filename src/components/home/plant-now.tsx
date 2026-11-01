@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWeather } from "@/components/weather/weather-widget";
 import { CLIMATE_ZONE_LABELS, METHOD_LABELS } from "@/domain/labels";
+import { countryOfLocation } from "@/domain/location";
 import { recommendCrops, upcomingStarts, type Recommendation } from "@/domain/recommendations";
 import type { Crop } from "@/domain/types";
 import { formatDate, formatMonthRange, monthName } from "@/lib/format";
@@ -36,10 +37,10 @@ function NowCard({ r, today }: { r: Recommendation; today: string }) {
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-xs font-bold",
-                protect ? "bg-warning-soft text-warning" : "bg-brand-100 text-brand-700",
+                protect || r.general ? "bg-warning-soft text-warning" : "bg-brand-100 text-brand-700",
               )}
             >
-              {protect ? "يحتاج حماية" : "مناسب الآن"}
+              {r.general ? "موعد عام" : protect ? "يحتاج حماية" : "مناسب الآن"}
             </span>
           </p>
           <p className="text-sm text-muted-foreground">
@@ -91,7 +92,7 @@ export function PlantNow({ crops, examples }: { crops: Crop[]; examples: string[
   const method = prefs?.method ?? "all";
 
   const result = useMemo(
-    () => (location ? recommendCrops({ crops, today, zone: location.zone, spaceType: space, methodGroup: method, alerts }) : null),
+    () => (location ? recommendCrops({ crops, today, zone: location.zone, spaceType: space, methodGroup: method, alerts, country: countryOfLocation(location) }) : null),
     [crops, today, location, space, method, alerts],
   );
 

@@ -146,15 +146,16 @@ export const adminCropSchema = z
       .trim()
       .regex(/^[a-z0-9-]{2,60}$/, { error: "المعرّف يجب أن يتكون من حروف لاتينية صغيرة وأرقام وشرطات فقط" }),
     name: z.string({ error: "أدخل اسم المحصول" }).trim().min(2, { error: "اسم المحصول قصير جدًا" }).max(60),
-    otherNames: z.array(z.string().trim().min(1).max(40)).max(10).default([]),
+    otherNames: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
     scientificName: z.string().trim().max(120).optional().default(""),
     category: z.enum(CROP_CATEGORIES, { error: "اختر التصنيف" }),
     lifeCycle: z.enum(LIFE_CYCLES),
-    difficulty: z.enum(DIFFICULTIES),
-    sun: z.enum(SUN_REQUIREMENTS),
-    water: z.enum(WATER_NEEDS),
+    difficulty: z.enum(DIFFICULTIES).nullable(),
+    sun: z.enum(SUN_REQUIREMENTS).nullable(),
+    water: z.enum(WATER_NEEDS).nullable(),
+    propagation: z.array(z.enum(PLANTING_METHODS)).max(PLANTING_METHODS.length).default([]),
     frostSensitive: z.boolean().default(false),
-    spaceTypes: z.array(z.enum(SPACE_TYPES)).min(1, { error: "اختر نوع مساحة واحدًا على الأقل" }),
+    spaceTypes: z.array(z.enum(SPACE_TYPES)),
     growthDaysMin: z.number().int().min(1).max(3650).nullable(),
     growthDaysMax: z.number().int().min(1).max(3650).nullable(),
     growthNote: z.string().trim().max(300).optional().default(""),
@@ -177,11 +178,16 @@ export const adminCropSchema = z
 export type AdminCropInput = z.infer<typeof adminCropSchema>;
 
 export const adminWindowSchema = z.object({
-  zone: z.enum(CLIMATE_ZONES),
+  /** null = general date for the whole country (not zone-specific). */
+  zone: z.enum(CLIMATE_ZONES).nullable(),
+  countryCode: z.union([z.string().regex(/^[A-Z]{2}$/), z.literal("")]).optional().default(""),
   startMonth: month,
   endMonth: month,
   method: z.enum(PLANTING_METHODS),
   note: z.string().trim().max(160).optional().default(""),
+  /** Kept from the loaded window so an admin save does not drop the reference. */
+  sourceId: z.union([z.string().regex(/^[a-z0-9-]{2,60}$/), z.literal("")]).optional().default(""),
+  sourceDetail: z.string().trim().max(600).optional().default(""),
 });
 
 export const adminTemplateSchema = z

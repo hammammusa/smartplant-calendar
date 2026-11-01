@@ -69,6 +69,7 @@ export async function saveCropAction(id: string | null, raw: unknown): Promise<A
     sun: v.sun,
     water: v.water,
     frost_sensitive: v.frostSensitive,
+    propagation: v.propagation,
     space_types: v.spaceTypes,
     growth_days_min: v.growthDaysMin,
     growth_days_max: v.growthDaysMax,
@@ -102,13 +103,29 @@ export async function saveCropRulesAction(cropId: string, raw: unknown): Promise
   const { supabase } = ctx;
   const v = parsed.data;
 
+  // Mark the crop as edited by an admin so the generated seed never overwrites it.
+  {
+    const { error } = await supabase.from("crops").update({ updated_by: ctx.user.id }).eq("id", cropId);
+    if (error) return fail("rules:mark", error.message, error.code);
+  }
   for (const table of ["crop_planting_windows", "crop_task_templates", "crop_guides"] as const) {
     const { error } = await supabase.from(table).delete().eq("crop_id", cropId);
     if (error) return fail(`rules:clear:${table}`, error.message, error.code);
   }
   if (v.windows.length) {
     const { error } = await supabase.from("crop_planting_windows").insert(
-      v.windows.map((w, i) => ({ crop_id: cropId, zone: w.zone, start_month: w.startMonth, end_month: w.endMonth, method: w.method, note: w.note || null, sort_order: i })),
+      v.windows.map((w, i) => ({
+        crop_id: cropId,
+        zone: w.zone,
+        country_code: w.countryCode || null,
+        start_month: w.startMonth,
+        end_month: w.endMonth,
+        method: w.method,
+        note: w.note || null,
+        source_id: w.sourceId || null,
+        source_detail: w.sourceDetail || null,
+        sort_order: i,
+      })),
     );
     if (error) return fail("rules:windows", error.message, error.code);
   }

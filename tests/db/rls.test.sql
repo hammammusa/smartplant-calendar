@@ -1,3 +1,34 @@
+-- Catalogue: seed applied twice (see run.sh) without duplicates.
+do $$
+begin
+  if (select count(*) from public.crops) < 100 then raise exception 'catalogue not seeded'; end if;
+  if (select count(*) from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.slug = 'tomato') <> 6 then
+    raise exception 'tomato windows duplicated or missing';
+  end if;
+  if (select count(*) from public.crop_task_templates t join public.crops c on c.id = t.crop_id where c.slug = 'tomato') <> 9 then
+    raise exception 'tomato task rules duplicated or missing';
+  end if;
+  if (select data_status from public.crops where slug = 'okra') <> 'preliminary' then raise exception 'okra should be preliminary'; end if;
+  if (select count(*) from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.slug = 'okra' and w.source_id = 'moa-ps-okra') <> 3 then
+    raise exception 'okra sourced windows missing or duplicated';
+  end if;
+  if (select count(*) from public.crop_planting_windows w join public.crops c on c.id = w.crop_id
+      where c.slug = 'wheat' and w.zone is null and w.country_code = 'PS' and w.source_id = 'wafa-field-crops') <> 2 then
+    raise exception 'wheat general Palestinian windows missing';
+  end if;
+  if exists (select 1 from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.slug = 'tomato' and w.country_code is not null) then
+    raise exception 'existing general windows must stay unscoped';
+  end if;
+  if (select data_status from public.crops where slug = 'eggplant') <> 'incomplete' then raise exception 'eggplant should stay incomplete'; end if;
+  if exists (select 1 from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.data_status = 'incomplete') then
+    raise exception 'incomplete crops must not have windows';
+  end if;
+  if not exists (select 1 from public.crops where slug = 'tomato' and 'الطماطة' = any(other_names)) then raise exception 'aliases not merged'; end if;
+  if (select cardinality(other_names) from public.crops where slug = 'tomato') <> cardinality(array(select distinct unnest(other_names) from public.crops where slug = 'tomato')) then
+    raise exception 'duplicate aliases';
+  end if;
+end $$;
+
 -- RLS / permission tests. Each block raises an exception on failure.
 \set ON_ERROR_STOP on
 
@@ -175,4 +206,30 @@ begin
 end $$;
 
 reset role;
+
+-- Upgrading an existing database: a crop seeded earlier as "incomplete"
+-- becomes "preliminary" with its sourced windows, unless an admin edited it.
+update public.crops set data_status = 'incomplete', summary = 'نسخة قديمة', updated_by = (select id from auth.users limit 1) where slug = 'okra';
+delete from public.crop_planting_windows where crop_id = (select id from public.crops where slug = 'okra');
+\ir ../../supabase/seed.sql
+do $$
+begin
+  if (select data_status from public.crops where slug = 'okra') <> 'incomplete' then raise exception 'seed overwrote an admin-edited crop'; end if;
+  if (select summary from public.crops where slug = 'okra') <> 'نسخة قديمة' then raise exception 'seed overwrote admin summary'; end if;
+  if exists (select 1 from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.slug = 'okra') then
+    raise exception 'seed added windows to an admin-edited crop';
+  end if;
+end $$;
+update public.crops set updated_by = null where slug = 'okra';
+\ir ../../supabase/seed.sql
+\ir ../../supabase/seed.sql
+do $$
+begin
+  if (select data_status from public.crops where slug = 'okra') <> 'preliminary' then raise exception 'okra not upgraded'; end if;
+  if (select count(*) from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.slug = 'okra') <> 3 then
+    raise exception 'okra windows not inserted exactly once';
+  end if;
+  if (select count(*) from public.crops) <> (select count(distinct slug) from public.crops) then raise exception 'duplicate crops'; end if;
+end $$;
+
 select 'ALL RLS TESTS PASSED' as result;

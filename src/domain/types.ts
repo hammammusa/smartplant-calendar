@@ -35,6 +35,10 @@ export const CROP_CATEGORIES = [
   "herb",
   "fruit",
   "tree",
+  "legume",
+  "cereal",
+  "forage",
+  "field_crop",
 ] as const;
 export type CropCategory = (typeof CROP_CATEGORIES)[number];
 
@@ -50,6 +54,11 @@ export type WaterNeed = (typeof WATER_NEEDS)[number];
 export const LIFE_CYCLES = ["annual", "perennial"] as const;
 export type LifeCycle = (typeof LIFE_CYCLES)[number];
 
+/**
+ * How a crop goes into the ground. `nursery_sowing` (sowing seeds in trays or
+ * a nursery bed) and `transplanting` (moving seedlings to their final place)
+ * are different dates and must never be merged into one window.
+ */
 export const PLANTING_METHODS = [
   "direct_sowing",
   "transplanting",
@@ -57,14 +66,21 @@ export const PLANTING_METHODS = [
   "cloves",
   "cuttings",
   "saplings",
+  "nursery_sowing",
+  "offshoots",
 ] as const;
 export type PlantingMethod = (typeof PLANTING_METHODS)[number];
 
 export const SEASONS = ["winter", "spring", "summer", "autumn"] as const;
 export type Season = (typeof SEASONS)[number];
 
-/** `preliminary` = general seed data, not yet reviewed by an agronomist. */
-export const DATA_STATUSES = ["preliminary", "reviewed"] as const;
+/**
+ * `preliminary` = general seed data, not yet reviewed by an agronomist.
+ * `incomplete` = the crop is listed (names, category) but no reliable
+ * planting information has been added yet: it has no windows, no tasks and
+ * cannot be planned until a sourced entry replaces it.
+ */
+export const DATA_STATUSES = ["preliminary", "reviewed", "incomplete"] as const;
 export type DataStatus = (typeof DATA_STATUSES)[number];
 
 export const TASK_TYPES = [
@@ -97,12 +113,28 @@ export const GUIDE_SECTIONS = [
 export type GuideSection = (typeof GUIDE_SECTIONS)[number];
 
 export interface PlantingWindow {
-  zone: ClimateZone;
+  /**
+   * Climate zone the window was documented for. null = a general date for the
+   * whole country (`countryCode`), not verified for any particular zone: it is
+   * used only when the crop has no window for the visitor's zone, and the UI
+   * labels it as general.
+   */
+  zone: ClimateZone | null;
+  /**
+   * ISO country the source covers (e.g. "PS"). Empty = general Levant guidance
+   * (the original preliminary data). A scoped window is never shown as
+   * documented for a location in another country.
+   */
+  countryCode?: string;
   /** 1–12. A window may wrap the year end (e.g. 10 → 2). */
   startMonth: number;
   endMonth: number;
   method: PlantingMethod;
   note?: string;
+  /** Id of the reference in src/data/crop-sources.ts this window comes from. */
+  sourceId?: string;
+  /** Where in the reference (section/paragraph) and what it says. */
+  sourceDetail?: string;
 }
 
 /**
@@ -136,9 +168,12 @@ export interface Crop {
   scientificName?: string;
   category: CropCategory;
   lifeCycle: LifeCycle;
-  difficulty: Difficulty;
-  sun: SunRequirement;
-  water: WaterNeed;
+  /** null = not documented yet (never guessed). */
+  difficulty: Difficulty | null;
+  sun: SunRequirement | null;
+  water: WaterNeed | null;
+  /** Usual ways to establish the crop (general botanical knowledge, not dates). */
+  propagation?: PlantingMethod[];
   spaceTypes: SpaceType[];
   /**
    * Damaged by frost (warm-season crops). Drives frost warnings in

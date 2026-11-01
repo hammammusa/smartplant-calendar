@@ -57,9 +57,10 @@ function toCropForm(c: Crop | null, published: boolean): CropForm {
     scientificName: c?.scientificName ?? "",
     category: c?.category ?? "fruiting_vegetable",
     lifeCycle: c?.lifeCycle ?? "annual",
-    difficulty: c?.difficulty ?? "easy",
-    sun: c?.sun ?? "full_sun",
-    water: c?.water ?? "moderate",
+    difficulty: c ? c.difficulty : "easy",
+    sun: c ? c.sun : "full_sun",
+    water: c ? c.water : "moderate",
+    propagation: c?.propagation ?? [],
     frostSensitive: c?.frostSensitive ?? false,
     spaceTypes: c?.spaceTypes ?? ["home_garden"],
     growthDaysMin: c?.growthDaysMin ?? null,
@@ -92,7 +93,7 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
   const rules = useForm<RulesForm, unknown, z.output<typeof adminCropRulesSchema>>({
     resolver: zodResolver(adminCropRulesSchema),
     defaultValues: {
-      windows: crop?.windows.map((w) => ({ ...w, note: w.note ?? "" })) ?? [],
+      windows: crop?.windows.map((w) => ({ ...w, note: w.note ?? "", countryCode: w.countryCode ?? "", sourceId: w.sourceId ?? "", sourceDetail: w.sourceDetail ?? "" })) ?? [],
       templates:
         crop?.templates.map((t) => ({
           key: t.key,
@@ -175,17 +176,20 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
               </Select>
             </Field>
             <Field label="مستوى الصعوبة" htmlFor="difficulty">
-              <Select id="difficulty" {...form.register("difficulty")}>
+              <Select id="difficulty" {...form.register("difficulty", { setValueAs: (v) => v || null })}>
+                <option value="">غير موثّق بعد</option>
                 {DIFFICULTIES.map((c) => <option key={c} value={c}>{DIFFICULTY_LABELS[c]}</option>)}
               </Select>
             </Field>
             <Field label="احتياج الشمس" htmlFor="sun">
-              <Select id="sun" {...form.register("sun")}>
+              <Select id="sun" {...form.register("sun", { setValueAs: (v) => v || null })}>
+                <option value="">غير موثّق بعد</option>
                 {SUN_REQUIREMENTS.map((c) => <option key={c} value={c}>{SUN_LABELS[c]}</option>)}
               </Select>
             </Field>
             <Field label="احتياج الري" htmlFor="water">
-              <Select id="water" {...form.register("water")}>
+              <Select id="water" {...form.register("water", { setValueAs: (v) => v || null })}>
+                <option value="">غير موثّق بعد</option>
                 {WATER_NEEDS.map((c) => <option key={c} value={c}>{WATER_LABELS[c]}</option>)}
               </Select>
             </Field>
@@ -308,7 +312,8 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
             <CardContent className="flex flex-col gap-3">
               {windows.fields.map((f, i) => (
                 <div key={f.id} className="grid grid-cols-2 gap-2 rounded-xl border border-border p-3 md:grid-cols-[1fr_1fr_1fr_1fr_1.5fr_auto]">
-                  <Select aria-label="المنطقة" {...rules.register(`windows.${i}.zone`)}>
+                  <Select aria-label="المنطقة" {...rules.register(`windows.${i}.zone`, { setValueAs: (v) => v || null })}>
+                    <option value="">عام للبلد كله (غير خاص بمنطقة)</option>
                     {CLIMATE_ZONES.map((z) => <option key={z} value={z}>{CLIMATE_ZONE_LABELS[z]}</option>)}
                   </Select>
                   <Select aria-label="من شهر" {...rules.register(`windows.${i}.startMonth`, { valueAsNumber: true })}>
@@ -324,7 +329,7 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
                   <Button variant="danger-ghost" size="icon" aria-label="حذف الموعد" onClick={() => windows.remove(i)}><Trash2 /></Button>
                 </div>
               ))}
-              <Button variant="outline" className="self-start" onClick={() => windows.append({ zone: "highland", startMonth: 3, endMonth: 4, method: "transplanting", note: "" })}>
+              <Button variant="outline" className="self-start" onClick={() => windows.append({ zone: "highland", countryCode: "", startMonth: 3, endMonth: 4, method: "transplanting", note: "", sourceId: "", sourceDetail: "" })}>
                 <Plus /> إضافة موعد
               </Button>
             </CardContent>

@@ -174,3 +174,83 @@ export function formatAccuracy(m: number): string {
   if (m < 1000) return `± ${Math.round(m)} م`;
   return `± ${(m / 1000).toFixed(1)} كم`;
 }
+
+/**
+ * Approximate line of the Jordan River, the Dead Sea and Wadi Araba (north →
+ * south), used only to tell which side of the border a coordinate is on.
+ * It is deliberately coarse; points close to it are treated as unknown.
+ */
+const JORDAN_BORDER: [lat: number, lon: number][] = [
+  [32.7, 35.58],
+  [32.45, 35.57],
+  [32.2, 35.55],
+  [32.0, 35.53],
+  [31.87, 35.545],
+  [31.76, 35.56],
+  [31.5, 35.49],
+  [31.2, 35.47],
+  [31.0, 35.4],
+  [30.5, 35.17],
+];
+
+/** Approximate Lebanon–Palestine border (west → east), as [lon, lat]. */
+const LEBANON_BORDER: [lon: number, lat: number][] = [
+  [35.1, 33.09],
+  [35.3, 33.1],
+  [35.5, 33.1],
+  [35.57, 33.28],
+];
+
+/** Points closer than this to the border line get no country. */
+export const BORDER_BAND_KM = 3;
+/** Elsewhere, the nearest listed town of one country must be this much closer than any other country's. */
+export const COUNTRY_MARGIN_KM = 15;
+
+function borderLongitudeAt(lat: number): number | null {
+  for (let i = 0; i < JORDAN_BORDER.length - 1; i++) {
+    const [lat1, lon1] = JORDAN_BORDER[i];
+    const [lat2, lon2] = JORDAN_BORDER[i + 1];
+    if (lat <= lat1 && lat >= lat2) return lon1 + ((lat - lat1) / (lat2 - lat1)) * (lon2 - lon1);
+  }
+  return null;
+}
+
+/**
+ * Country of a coordinate when it can be told with reasonable confidence,
+ * otherwise null (never a guess presented as fact).
+ *  - Along the Jordan Valley / Dead Sea / Araba: by side of the border line,
+ *    null within BORDER_BAND_KM of it.
+ *  - Elsewhere: the country of the nearest listed town, only if it is at least
+ *    COUNTRY_MARGIN_KM closer than the nearest town of any other country.
+ */
+export function countryFromCoordinates(p: LatLon, towns: { countryCode: string; latitude: number; longitude: number }[]): string | null {
+  // Golan and the upper Jordan: several borders meet; never guess there.
+  if (p.longitude >= 35.62 && p.latitude >= 32.65 && p.latitude <= 33.4) return null;
+  // Lebanese border.
+  if (p.latitude >= 32.95 && p.latitude <= 33.4 && p.longitude >= LEBANON_BORDER[0][0] && p.longitude <= LEBANON_BORDER[LEBANON_BORDER.length - 1][0]) {
+    let borderLat = LEBANON_BORDER[0][1];
+    for (let i = 0; i < LEBANON_BORDER.length - 1; i++) {
+      const [lon1, lat1] = LEBANON_BORDER[i];
+      const [lon2, lat2] = LEBANON_BORDER[i + 1];
+      if (p.longitude >= lon1 && p.longitude <= lon2) borderLat = lat1 + ((p.longitude - lon1) / (lon2 - lon1)) * (lat2 - lat1);
+    }
+    const km = Math.abs(p.latitude - borderLat) * 110.57;
+    if (km < BORDER_BAND_KM) return null;
+    return p.latitude < borderLat ? "PS" : "LB";
+  }
+  const borderLon = borderLongitudeAt(p.latitude);
+  if (borderLon != null) {
+    const km = Math.abs(p.longitude - borderLon) * 111.32 * Math.cos((p.latitude * Math.PI) / 180);
+    if (km < BORDER_BAND_KM) return null;
+    return p.longitude < borderLon ? "PS" : "JO";
+  }
+  const best = new Map<string, number>();
+  for (const t of towns) {
+    const d = distanceKm(p, t);
+    if (d < (best.get(t.countryCode) ?? Infinity)) best.set(t.countryCode, d);
+  }
+  const ranked = [...best].sort((a, b) => a[1] - b[1]);
+  if (ranked.length === 0) return null;
+  if (ranked.length === 1) return ranked[0][0];
+  return ranked[1][1] - ranked[0][1] >= COUNTRY_MARGIN_KM ? ranked[0][0] : null;
+}
