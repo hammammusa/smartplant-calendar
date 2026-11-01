@@ -153,6 +153,7 @@ export const adminCropSchema = z
     difficulty: z.enum(DIFFICULTIES),
     sun: z.enum(SUN_REQUIREMENTS),
     water: z.enum(WATER_NEEDS),
+    frostSensitive: z.boolean().default(false),
     spaceTypes: z.array(z.enum(SPACE_TYPES)).min(1, { error: "اختر نوع مساحة واحدًا على الأقل" }),
     growthDaysMin: z.number().int().min(1).max(3650).nullable(),
     growthDaysMax: z.number().int().min(1).max(3650).nullable(),

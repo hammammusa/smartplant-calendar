@@ -36,7 +36,7 @@ lines.push("");
 for (const c of SEED_CROPS) {
   lines.push(`-- ${c.slug}`);
   lines.push(
-    `insert into public.crops (slug, name, other_names, scientific_name, category, life_cycle, difficulty, sun, water, space_types, growth_days_min, growth_days_max, growth_note, summary, watering_summary, image_alt, data_status, source_note) values (${q(c.slug)}, ${q(c.name)}, ${arr(c.otherNames, "text")}, ${q(c.scientificName)}, ${q(c.category)}, ${q(c.lifeCycle)}, ${q(c.difficulty)}, ${q(c.sun)}, ${q(c.water)}, ${arr(c.spaceTypes, "text")}, ${n(c.growthDaysMin)}, ${n(c.growthDaysMax)}, ${q(c.growthNote)}, ${q(c.summary)}, ${q(c.wateringSummary)}, ${q(c.imageAlt)}, ${q(c.dataStatus)}, ${q(c.sourceNote)}) on conflict (slug) do nothing;`,
+    `insert into public.crops (slug, name, other_names, scientific_name, category, life_cycle, difficulty, sun, water, frost_sensitive, space_types, growth_days_min, growth_days_max, growth_note, summary, watering_summary, image_alt, data_status, source_note) values (${q(c.slug)}, ${q(c.name)}, ${arr(c.otherNames, "text")}, ${q(c.scientificName)}, ${q(c.category)}, ${q(c.lifeCycle)}, ${q(c.difficulty)}, ${q(c.sun)}, ${q(c.water)}, ${c.frostSensitive}, ${arr(c.spaceTypes, "text")}, ${n(c.growthDaysMin)}, ${n(c.growthDaysMax)}, ${q(c.growthNote)}, ${q(c.summary)}, ${q(c.wateringSummary)}, ${q(c.imageAlt)}, ${q(c.dataStatus)}, ${q(c.sourceNote)}) on conflict (slug) do nothing;`,
   );
   const crop = `(select id from public.crops where slug = ${q(c.slug)})`;
   c.windows.forEach((w, i) => {

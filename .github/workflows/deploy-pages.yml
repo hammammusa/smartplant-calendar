@@ -1,12 +1,18 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (PUBLIC — disabled)
+
+# GitHub Pages is public: anyone with the link can open the site. The project is
+# moving to private hosting (Cloudflare Pages + Access, see
+# docs/PRIVATE_HOSTING.md), so this workflow no longer runs on push or on a
+# schedule. It can only be started by hand, and only after typing the
+# confirmation below. Delete this file once the private site is verified.
 
 on:
-  push:
-    branches: [main]
-  # Rebuild daily so content edited in the admin panel (Supabase) reaches the static pages.
-  schedule:
-    - cron: "17 3 * * *"
   workflow_dispatch:
+    inputs:
+      confirm_public:
+        description: 'Type PUBLISH-PUBLICLY to publish a PUBLIC copy on GitHub Pages'
+        required: true
+        default: ""
 
 permissions:
   contents: read
@@ -19,6 +25,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event.inputs.confirm_public == 'PUBLISH-PUBLICLY'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

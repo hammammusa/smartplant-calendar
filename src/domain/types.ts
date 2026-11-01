@@ -23,6 +23,7 @@ export const SPACE_TYPES = [
   "containers",
   "small_plot",
   "farm",
+  "greenhouse",
 ] as const;
 export type SpaceType = (typeof SPACE_TYPES)[number];
 
@@ -139,6 +140,11 @@ export interface Crop {
   sun: SunRequirement;
   water: WaterNeed;
   spaceTypes: SpaceType[];
+  /**
+   * Damaged by frost (warm-season crops). Drives frost warnings in
+   * recommendations; false means "no specific frost rule", not "frost-proof".
+   */
+  frostSensitive: boolean;
   /** Approximate days from planting to first harvest, null when unreliable. */
   growthDaysMin: number | null;
   growthDaysMax: number | null;

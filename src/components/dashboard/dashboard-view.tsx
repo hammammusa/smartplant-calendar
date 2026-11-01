@@ -18,7 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WeatherCard } from "@/components/weather/weather-widget";
 import { PLANTING_STATUS_LABELS, SPACE_TYPE_LABELS, TASK_TYPE_LABELS } from "@/domain/labels";
 import { bucketTasks, countByType, daysUntil } from "@/domain/tasks";
-import { TASK_TYPES, type ISODate, type Planting, type Task, type TaskType } from "@/domain/types";
+import { TASK_TYPES, type Crop, type ISODate, type Planting, type Task, type TaskType } from "@/domain/types";
+import { RecommendationsView } from "@/components/recommendations/recommendations-view";
 import { addDays, diffDays, startOfMonth } from "@/lib/dates";
 import { formatDate, formatNumber, relativeDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,7 @@ function Stat({ icon: Icon, label, value, tone, href }: { icon: typeof Sprout; l
   );
 }
 
-export function DashboardView() {
+export function DashboardView({ crops }: { crops: Crop[] }) {
   const app = useAppData();
   const { data, today, mode, user } = app;
   const params = useSearchParams();
@@ -150,6 +151,11 @@ export function DashboardView() {
                 ))}
               </ul>
             )}
+          </section>
+
+          <section aria-labelledby="plant-now-h" className="rounded-2xl border border-border bg-surface p-5 shadow-xs">
+            <h2 id="plant-now-h" className="mb-3 font-bold">ماذا أزرع الآن في منطقتي؟</h2>
+            <RecommendationsView crops={crops} compact />
           </section>
 
           <section id="my-crops" aria-labelledby="crops-h" className="scroll-mt-24">

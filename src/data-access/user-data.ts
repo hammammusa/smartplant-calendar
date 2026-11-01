@@ -20,7 +20,7 @@ import {
   taskPatchSchema,
   uuidSchema,
 } from "@/domain/schemas";
-import { PLANTING_STATUSES, type Task, type UserDataSnapshot } from "@/domain/types";
+import { CLIMATE_ZONES, PLANTING_STATUSES, type Task, type UserDataSnapshot } from "@/domain/types";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { CROP_SELECT, mapCropRow, type CropRow } from "@/services/crop-mapper";
 import {
@@ -425,5 +425,53 @@ export async function updateNotificationPrefsAction(raw: unknown): Promise<Actio
     .update({ in_app_enabled: parsed.data.inAppEnabled, reminder_days_before: parsed.data.reminderDaysBefore })
     .eq("user_id", ctx.user.id);
   if (error) return fail("prefs:update", error.message);
+  return { ok: true, data: null };
+}
+
+/* ---------- Confirmed location (own profile row only, RLS) ---------- */
+
+const locationSchema = z.object({
+  version: z.literal(2),
+  source: z.enum(["gps", "map", "search", "list"]),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracyM: z.number().min(0).max(1_000_000).nullable(),
+  label: z.string().max(160),
+  regionId: z.string().max(80).nullable(),
+  zone: z.enum(CLIMATE_ZONES),
+  zoneSource: z.enum(["manual", "elevation", "nearest_town", "list"]),
+  elevationM: z.number().min(-500).max(9000).nullable(),
+  timezone: z.string().max(64),
+  externalConsent: z.boolean(),
+  confirmedAt: z.string().max(40),
+});
+
+export async function saveLocationAction(raw: unknown): Promise<ActionResult<null>> {
+  const ctx = await authed();
+  if ("error" in ctx) return { ok: false, error: ctx.error ?? GENERIC };
+  const patch =
+    raw === null
+      ? { latitude: null, longitude: null, location_label: null, location_source: null, location_accuracy_m: null, elevation_m: null, external_geo_consent: false, location_confirmed_at: null }
+      : (() => {
+          const parsed = locationSchema.safeParse(raw);
+          if (!parsed.success) return null;
+          const v = parsed.data;
+          return {
+            region_id: v.regionId,
+            zone: v.zone,
+            timezone: v.timezone,
+            latitude: v.latitude,
+            longitude: v.longitude,
+            location_label: v.label || null,
+            location_source: v.source,
+            location_accuracy_m: v.accuracyM,
+            elevation_m: v.elevationM,
+            external_geo_consent: v.externalConsent,
+            location_confirmed_at: v.confirmedAt,
+          };
+        })();
+  if (!patch) return { ok: false, error: "بيانات الموقع غير صالحة." };
+  const { error } = await ctx.supabase.from("profiles").update(patch).eq("id", ctx.user.id);
+  if (error) return fail("location:save", error.message);
   return { ok: true, data: null };
 }

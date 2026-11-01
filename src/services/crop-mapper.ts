@@ -12,6 +12,7 @@ export interface CropRow {
   difficulty: Crop["difficulty"];
   sun: Crop["sun"];
   water: Crop["water"];
+  frost_sensitive?: boolean | null;
   space_types: Crop["spaceTypes"];
   growth_days_min: number | null;
   growth_days_max: number | null;
@@ -62,6 +63,7 @@ export function mapCropRow(row: CropRow): Crop {
     difficulty: row.difficulty,
     sun: row.sun,
     water: row.water,
+    frostSensitive: row.frost_sensitive ?? false,
     spaceTypes: row.space_types ?? [],
     growthDaysMin: row.growth_days_min,
     growthDaysMax: row.growth_days_max,

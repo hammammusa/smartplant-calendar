@@ -10,9 +10,9 @@ import {
   Fence,
   Flower,
   LayoutDashboard,
-  LocateFixed,
   Search,
   Sprout,
+  Tent,
   Tractor,
   Trees,
   type LucideIcon,
@@ -30,8 +30,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Alert, Spinner } from "@/components/ui/feedback";
-import { Field, Input, Select, Textarea } from "@/components/ui/form-controls";
-import { COUNTRIES, findRegion, nearestRegion, regionsForCountry } from "@/data/regions";
+import { Field, Input, Textarea } from "@/components/ui/form-controls";
+import { LocationPicker } from "@/components/location/location-picker";
+import { LocationSummary } from "@/components/location/location-summary";
 import { normalizeArabic } from "@/domain/crop-filter";
 import {
   CLIMATE_ZONE_DESCRIPTIONS,
@@ -57,6 +58,7 @@ const SPACE_ICONS: Record<SpaceType, LucideIcon> = {
   containers: Sprout,
   small_plot: Fence,
   farm: Tractor,
+  greenhouse: Tent,
 };
 
 const detailsSchema = z.object({
@@ -83,16 +85,15 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
   const app = useAppData();
   const saved = app.location;
 
-  const initialRegion = findRegion(saved?.regionId) ?? findRegion("ps-hebron")!;
   const [step, setStep] = useState(0);
-  const [country, setCountry] = useState(initialRegion.countryCode);
-  const [regionId, setRegionId] = useState(initialRegion.id);
-  const [zone, setZone] = useState<ClimateZone>(saved?.zone ?? suggestedZone(initialRegion));
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(
-    saved?.latitude != null && saved?.longitude != null ? { lat: saved.latitude, lon: saved.longitude } : null,
+  // The confirmed location decides the default zone; the user can still pick another zone for this plan.
+  const [zoneChoice, setZoneChoice] = useState<ClimateZone | null>(null);
+  const [changingLocation, setChangingLocation] = useState(!saved);
+  const zone: ClimateZone = zoneChoice ?? (saved ? (saved.zoneSource === "list" ? suggestedZone({ id: saved.regionId ?? "", zone: saved.zone }) : saved.zone) : "highland");
+  const spaceParam = params.get("space");
+  const [space, setSpace] = useState<SpaceType | null>(
+    spaceParam && (SPACE_TYPES as readonly string[]).includes(spaceParam) ? (spaceParam as SpaceType) : null,
   );
-  const [geoState, setGeoState] = useState<"idle" | "loading" | "error">("idle");
-  const [space, setSpace] = useState<SpaceType | null>(null);
   const preselected = params.get("crop");
   const [selected, setSelected] = useState<string[]>(
     preselected && crops.some((c) => c.slug === preselected) ? [preselected] : [],
@@ -103,7 +104,6 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
   const [stepError, setStepError] = useState<string | null>(null);
   const [completePast, setCompletePast] = useState(true);
 
-  const region = findRegion(regionId);
   const form = useForm<Details>({
     resolver: zodResolver(detailsSchema),
     mode: "onTouched",
@@ -122,43 +122,12 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
     return q ? crops.filter((c) => normalizeArabic([c.name, ...(c.otherNames ?? [])].join(" ")).includes(q)) : crops;
   }, [crops, query]);
 
-  function useMyLocation() {
-    if (!("geolocation" in navigator)) {
-      setGeoState("error");
-      return;
-    }
-    setGeoState("loading");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const r = nearestRegion(latitude, longitude);
-        setCountry(r.countryCode);
-        setRegionId(r.id);
-        setZone(suggestedZone(r));
-        setCoords({ lat: Number(latitude.toFixed(4)), lon: Number(longitude.toFixed(4)) });
-        setGeoState("idle");
-        toast.success(`تم تحديد موقعك. أقرب مدينة في قائمتنا: ${r.name}`);
-      },
-      () => setGeoState("error"),
-      { timeout: 10000, maximumAge: 600_000 },
-    );
-  }
-
   async function next() {
     setStepError(null);
-    if (step === 0 && !region) return setStepError("اختر المدينة أو المحافظة.");
+    if (step === 0 && !saved) return setStepError("حدّد موقع أرضك وأكّده أولًا.");
     if (step === 1 && !space) return setStepError("اختر نوع المساحة الزراعية.");
     if (step === 2 && selected.length === 0) return setStepError("اختر محصولًا واحدًا على الأقل.");
     if (step === 3 && !(await form.trigger())) return;
-    if (step === 0 && region) {
-      app.setLocation({
-        regionId: region.id,
-        zone,
-        latitude: coords?.lat ?? region.latitude,
-        longitude: coords?.lon ?? region.longitude,
-        timezone: region.timezone,
-      });
-    }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -169,7 +138,7 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
   }
 
   async function submit() {
-    if (!space || !region) return;
+    if (!space || !saved) return;
     const v = detailsSchema.parse(form.getValues());
     setSubmitting(true);
     let gardenId: string | null = null;
@@ -182,14 +151,14 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
           plantedOn: v.plantedOn,
           zone,
           spaceType: space,
-          regionId: region.id,
+          regionId: saved.regionId,
           gardenId,
           gardenName: v.gardenName,
           areaM2: v.areaM2 === "" ? null : v.areaM2,
           quantity: v.quantity === "" ? null : v.quantity,
           notes: v.notes,
-          latitude: coords?.lat ?? region.latitude,
-          longitude: coords?.lon ?? region.longitude,
+          latitude: saved.latitude,
+          longitude: saved.longitude,
           completeBefore: completePast && v.plantedOn < app.today ? app.today : null,
         },
         crop,
@@ -289,80 +258,51 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
           <section aria-labelledby="s-location" className="flex flex-col gap-5">
             <div>
               <h2 id="s-location" className="text-2xl font-extrabold">أين ستزرع؟</h2>
-              <p className="mt-1 text-muted-foreground">نستخدم موقعك لتحديد المنطقة المناخية ومواعيد الزراعة المناسبة والطقس.</p>
+              <p className="mt-1 text-muted-foreground">نستخدم موقع أرضك الحقيقي لتحديد المنطقة المناخية ومواعيد الزراعة والطقس.</p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="الدولة" htmlFor="country">
-                <Select
-                  id="country"
-                  value={country}
-                  onChange={(e) => {
-                    const r = regionsForCountry(e.target.value)[0];
-                    setCountry(e.target.value);
-                    if (r) {
-                      setRegionId(r.id);
-                      setZone(suggestedZone(r));
-                    }
-                    setCoords(null);
-                  }}
-                >
-                  {COUNTRIES.map((c) => (
-                    <option key={c.code} value={c.code}>{c.name}</option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="المحافظة أو المدينة" htmlFor="region">
-                <Select
-                  id="region"
-                  value={regionId}
-                  onChange={(e) => {
-                    const r = findRegion(e.target.value);
-                    setRegionId(e.target.value);
-                    if (r) setZone(suggestedZone(r));
-                    setCoords(null);
-                  }}
-                >
-                  {regionsForCountry(country).map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button variant="outline" onClick={useMyLocation} disabled={geoState === "loading"}>
-                {geoState === "loading" ? <Spinner /> : <LocateFixed />} استخدم موقعي الحالي
-              </Button>
-              {coords ? <span className="text-sm text-muted-foreground">تم استخدام موقعك الجغرافي لبيانات الطقس.</span> : null}
-            </div>
-            {geoState === "error" ? (
-              <Alert tone="warning">تعذّر تحديد موقعك. تأكد من السماح للمتصفح بالوصول إلى الموقع، أو اختر مدينتك من القائمة.</Alert>
-            ) : null}
-            <fieldset className="flex flex-col gap-3">
-              <legend className="mb-2 text-sm font-semibold">المنطقة المناخية</legend>
-              <p className="-mt-1 text-xs leading-6 text-subtle-foreground">
-                اقترحنا منطقة حسب مدينتك، ويمكنك تغييرها إن كانت أرضك في ظروف مختلفة (مثل منطقة منخفضة أو مرتفعة عن مركز المدينة).
-              </p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {CLIMATE_ZONES.map((z) => (
-                  <label
-                    key={z}
-                    className={cn(
-                      "flex cursor-pointer gap-3 rounded-xl border p-3 transition-colors",
-                      zone === z ? "border-primary bg-accent/50" : "border-border hover:bg-surface-muted",
-                    )}
-                  >
-                    <input type="radio" name="zone" value={z} checked={zone === z} onChange={() => setZone(z)} className="mt-1.5 accent-[var(--primary)]" />
-                    <span>
-                      <span className="block font-semibold">
-                        {CLIMATE_ZONE_LABELS[z]}
-                        {region && suggestedZone(region) === z ? <Badge className="ms-2">مقترح لمدينتك</Badge> : null}
-                      </span>
-                      <span className="block text-xs leading-6 text-muted-foreground">{CLIMATE_ZONE_DESCRIPTIONS[z]}</span>
-                    </span>
-                  </label>
-                ))}
+            {saved && !changingLocation ? (
+              <div className="flex flex-col gap-3">
+                <LocationSummary />
+                <Button variant="ghost" size="sm" className="self-start" onClick={() => setChangingLocation(true)}>
+                  تغيير الموقع هنا
+                </Button>
               </div>
-            </fieldset>
+            ) : (
+              <LocationPicker
+                onConfirmed={() => {
+                  setChangingLocation(false);
+                  setZoneChoice(null);
+                }}
+              />
+            )}
+            {saved && !changingLocation ? (
+              <fieldset className="flex flex-col gap-3">
+                <legend className="mb-2 text-sm font-semibold">المنطقة المناخية لهذه الخطة</legend>
+                <p className="-mt-1 text-xs leading-6 text-subtle-foreground">
+                  اخترنا منطقة موقعك المحفوظ. غيّرها لهذه الخطة فقط إن كانت أرض هذه الزراعة في ظروف مختلفة.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {CLIMATE_ZONES.map((z) => (
+                    <label
+                      key={z}
+                      className={cn(
+                        "flex cursor-pointer gap-3 rounded-xl border p-3 transition-colors",
+                        zone === z ? "border-primary bg-accent/50" : "border-border hover:bg-surface-muted",
+                      )}
+                    >
+                      <input type="radio" name="zone" value={z} checked={zone === z} onChange={() => setZoneChoice(z)} className="mt-1.5 accent-[var(--primary)]" />
+                      <span>
+                        <span className="block font-semibold">
+                          {CLIMATE_ZONE_LABELS[z]}
+                          {saved.zone === z ? <Badge className="ms-2">منطقة موقعك</Badge> : null}
+                        </span>
+                        <span className="block text-xs leading-6 text-muted-foreground">{CLIMATE_ZONE_DESCRIPTIONS[z]}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
           </section>
         )}
 
@@ -501,12 +441,12 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
           </section>
         )}
 
-        {step === 4 && space && region && (
+        {step === 4 && space && saved && (
           <section aria-labelledby="s-plan" className="flex flex-col gap-5">
             <div>
               <h2 id="s-plan" className="text-2xl font-extrabold">راجع خطتك</h2>
               <p className="mt-1 text-muted-foreground">
-                {region.name} · {CLIMATE_ZONE_LABELS[zone]} · {SPACE_TYPE_LABELS[space]} · زراعة في {formatDate(plantedOn)}
+                {saved?.label} · {CLIMATE_ZONE_LABELS[zone]} · {SPACE_TYPE_LABELS[space]} · زراعة في {formatDate(plantedOn)}
               </p>
             </div>
             {plans.map(({ crop, plan }) => {

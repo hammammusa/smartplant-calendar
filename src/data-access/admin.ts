@@ -68,6 +68,7 @@ export async function saveCropAction(id: string | null, raw: unknown): Promise<A
     difficulty: v.difficulty,
     sun: v.sun,
     water: v.water,
+    frost_sensitive: v.frostSensitive,
     space_types: v.spaceTypes,
     growth_days_min: v.growthDaysMin,
     growth_days_max: v.growthDaysMax,

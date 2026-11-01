@@ -17,6 +17,7 @@ import {
   deleteTaskAction,
   importLocalDataAction,
   loadUserDataAction,
+  saveLocationAction,
   updatePlantingStatusAction,
   updateTaskAction,
   type ActionResult,
@@ -40,6 +41,45 @@ import {
   type SavedLocation,
 } from "@/lib/local-store";
 import { getBrowserSupabase } from "@/lib/supabase/client";
+import { normalizeLocation } from "@/domain/location";
+
+interface ProfileLocationRow {
+  region_id: string | null;
+  zone: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  timezone: string | null;
+  location_label?: string | null;
+  location_source?: string | null;
+  location_accuracy_m?: number | string | null;
+  elevation_m?: number | string | null;
+  external_geo_consent?: boolean | null;
+  location_confirmed_at?: string | null;
+}
+
+function profileToLocation(p: ProfileLocationRow): SavedLocation | null {
+  if (p.latitude == null || p.longitude == null) {
+    return normalizeLocation({ regionId: p.region_id, zone: p.zone, timezone: p.timezone ?? DEFAULT_TIMEZONE });
+  }
+  if (!p.location_source) {
+    return normalizeLocation({ regionId: p.region_id, zone: p.zone, latitude: p.latitude, longitude: p.longitude, timezone: p.timezone });
+  }
+  return normalizeLocation({
+    version: 2,
+    source: p.location_source,
+    latitude: p.latitude,
+    longitude: p.longitude,
+    accuracyM: p.location_accuracy_m == null ? null : Number(p.location_accuracy_m),
+    label: p.location_label ?? "",
+    regionId: p.region_id,
+    zone: p.zone,
+    zoneSource: "manual",
+    elevationM: p.elevation_m == null ? null : Number(p.elevation_m),
+    timezone: p.timezone || DEFAULT_TIMEZONE,
+    externalConsent: Boolean(p.external_geo_consent),
+    confirmedAt: p.location_confirmed_at ?? new Date(0).toISOString(),
+  });
+}
 
 export type DataMode = "loading" | "local" | "remote";
 type Result<T = null> = { ok: true; data: T } | { ok: false; error: string };
@@ -57,7 +97,7 @@ interface AppData {
   today: string;
   location: SavedLocation | null;
   localItemsToImport: number;
-  setLocation: (loc: SavedLocation) => void;
+  setLocation: (loc: SavedLocation | null) => Promise<Result>;
   reload: () => Promise<void>;
   createPlan: (input: PlanRequest, crop: Crop) => Promise<Result<{ plantingId: string; gardenId: string }>>;
   addTask: (input: TaskInput) => Promise<Result<Task>>;
@@ -136,21 +176,11 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       if (supabase) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role, region_id, zone, latitude, longitude, timezone")
+          .select("role, region_id, zone, latitude, longitude, timezone, location_label, location_source, location_accuracy_m, elevation_m, external_geo_consent, location_confirmed_at")
           .eq("id", u.id)
           .maybeSingle();
         setIsAdmin(profile?.role === "admin");
-        if (profile) {
-          setLocationState({
-            regionId: profile.region_id,
-            zone: profile.zone,
-            latitude: profile.latitude,
-            longitude: profile.longitude,
-            timezone: profile.timezone || DEFAULT_TIMEZONE,
-          });
-        } else {
-          setLocationState(readLocation());
-        }
+        setLocationState((profile && profileToLocation(profile)) ?? readLocation());
       }
       await loadRemote();
     },
@@ -186,12 +216,18 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     return writeLocal(next);
   }, []);
 
-  const setLocation = useCallback(
-    (loc: SavedLocation) => {
+  /** Saves the confirmed location on this device, and on the profile when signed in. */
+  const setLocation = useCallback<AppData["setLocation"]>(
+    async (loc) => {
       setLocationState(loc);
       writeLocation(loc);
+      if (mode === "remote") {
+        const res = await callAction(() => saveLocationAction(loc));
+        if (!res.ok) return res;
+      }
+      return { ok: true, data: null };
     },
-    [],
+    [mode],
   );
 
   const createPlan = useCallback<AppData["createPlan"]>(

@@ -12,7 +12,9 @@ Arabic-first agricultural planning platform (Palestine / Levant). Next.js 16 App
 4. **Agricultural honesty.** Seed crop data is `dataStatus: "preliminary"`. Never present plans as definitive; unknown growth periods stay `null` (no invented harvest date). Irrigation is "check soil moisture", never inferred from temperature alone.
 5. **Security lives in the database.** The site is a static export on GitHub Pages: the browser talks to Supabase with the public key only. Hiding buttons is not protection — RLS, CHECK constraints and row limits in `supabase/migrations/` are. Every data-access call still does Zod parse → `supabase.auth.getUser()` → query as the user. Never add a service-role key or any secret to `NEXT_PUBLIC_*` variables.
 6. **Static export only.** No Server Actions, Route Handlers, Proxy/middleware, `cookies()`, ISR (`revalidate`), `dynamic = "force-dynamic"`, or dynamic routes without `generateStaticParams` + `dynamicParams = false`. Pass ids via `?query` on a static page instead (see `/admin/crops/edit`). The server-rendered version lives on the `server-version` branch.
-7. **Base path.** The site is served under `NEXT_PUBLIC_BASE_PATH` (`/smartplant-calendar` on GitHub Pages). `<Link>` and `useRouter` add it automatically; for anything else (auth email redirects, manifest, plain URLs) use `appUrl()` / `absoluteUrl()` from `src/lib/env.ts`. Anything date-dependent must be computed in the browser (`useAppData().today`), never at build time.
+7. **Base path.** The site is served under `NEXT_PUBLIC_BASE_PATH` (empty on Cloudflare Pages; `/smartplant-calendar` for the old GitHub Pages build). `<Link>` and `useRouter` add it automatically; for anything else (auth email redirects, manifest, plain URLs) use `appUrl()` / `absoluteUrl()` from `src/lib/env.ts`. Anything date-dependent must be computed in the browser (`useAppData().today`), never at build time.
+8. **Location privacy.** GPS/map coordinates (`SavedLocation.source` gps|map) must not reach any external service (OSM tiles, Nominatim, Open-Meteo) without `externalConsent`; use `coordsForServices()` (rounded ~1 km for weather). Nominatim: explicit submit only (never autocomplete), ≤1 req/s, cached, attributed «© مساهمو OpenStreetMap». Never log coordinates or put them in URLs of our own pages.
+9. **Private hosting.** Production is Cloudflare Pages behind Cloudflare Access (docs/PRIVATE_HOSTING.md). The deploy workflow must verify Access on every hostname before uploading; never add a step that deploys without that check, and never re-enable automatic GitHub Pages publishing.
 
 ## Where things live
 
@@ -22,6 +24,7 @@ Arabic-first agricultural planning platform (Palestine / Levant). Next.js 16 App
 - `src/components/providers/app-data-provider.tsx` single client data source; switches between guest (localStorage) and signed-in (`src/data-access`, Supabase from the browser).
 - `src/data-access/` browser data access (user + admin) through Supabase/RLS; `src/services/` build-time reads of public content.
 - `src/lib/weather-client.ts` calls Open-Meteo directly from the browser (keyless).
+- `src/domain/geo.ts` (zone rules, distances, accuracy), `src/domain/location.ts` (SavedLocation v2 + consent), `src/domain/recommendations.ts` (what-to-plant-now rules); browser geo clients in `src/lib/geo/`.
 - `supabase/migrations/` schema + RLS; `supabase/seed.sql` is **generated** from `src/data` by `npm run db:seed:generate` — edit the TS data, then regenerate.
 - Design tokens: `src/app/globals.css` (`:root` vars → `@theme inline`). Change colours there, not in components.
 

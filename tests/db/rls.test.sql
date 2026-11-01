@@ -47,8 +47,14 @@ do $$ begin
   end;
 end $$;
 
--- A can update allowed profile columns.
-update public.profiles set full_name = 'اسم جديد', region_id = 'ps-gaza' where id = auth.uid();
+-- A can update allowed profile columns, including the confirmed location.
+update public.profiles set full_name = 'اسم جديد', region_id = 'ps-gaza',
+  latitude = 31.6103, longitude = 35.0711, location_label = 'قرية تجريبية', location_source = 'gps',
+  location_accuracy_m = 12, elevation_m = 870, external_geo_consent = true, location_confirmed_at = now()
+  where id = auth.uid();
+
+-- A greenhouse garden is accepted.
+insert into public.gardens (name, space_type, zone) values ('بيتي المحمي', 'greenhouse', 'highland');
 
 -- A is not admin: cannot edit crops, cannot read stats.
 do $$ begin
@@ -87,6 +93,7 @@ begin
   if (select count(*) from public.plantings) <> 0 then raise exception 'B sees A plantings'; end if;
   if (select count(*) from public.gardens) <> 0 then raise exception 'B sees A gardens'; end if;
   if (select count(*) from public.profiles) <> 1 then raise exception 'B sees other profiles'; end if;
+  if exists (select 1 from public.profiles where location_label is not null) then raise exception 'B sees A location'; end if;
 
   update public.tasks set title = 'hacked';
   delete from public.tasks;
@@ -163,6 +170,8 @@ begin
   if (s ->> 'tasks')::int <> 2 then raise exception 'stats tasks wrong: %', s; end if;
   -- Admin still cannot read other users' private tasks directly.
   if (select count(*) from public.tasks) <> 0 then raise exception 'admin reads private tasks'; end if;
+  if exists (select 1 from public.profiles where location_label is not null) then raise exception 'admin reads user location'; end if;
+  if not (select frost_sensitive from public.crops where slug = 'tomato') then raise exception 'tomato frost flag missing'; end if;
 end $$;
 
 reset role;

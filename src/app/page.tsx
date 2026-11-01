@@ -19,6 +19,7 @@ import { CropCard } from "@/components/crops/crop-card";
 import { HeroVisual } from "@/components/home/hero-visual";
 import { PlanPreview } from "@/components/home/plan-preview";
 import { SeasonExplorer } from "@/components/home/season-explorer";
+import { RecommendationsView } from "@/components/recommendations/recommendations-view";
 import { Button } from "@/components/ui/button";
 import { SEASON_MONTHS } from "@/domain/labels";
 import { SEASONS } from "@/domain/types";
@@ -112,6 +113,17 @@ export default async function HomePage() {
             </li>
           ))}
         </ol>
+      </section>
+
+      {/* What to plant now (location-based) */}
+      <section aria-labelledby="plant-now" className="container-page pb-14 sm:pb-20">
+        <div className="rounded-3xl border border-border bg-surface p-5 shadow-xs sm:p-8">
+          <div className="mb-5 max-w-2xl">
+            <p className="mb-2 text-sm font-bold text-lime-600">حسب موقعك وتاريخ اليوم</p>
+            <h2 id="plant-now" className="text-3xl font-extrabold">ماذا أزرع الآن في منطقتي؟</h2>
+          </div>
+          <RecommendationsView crops={crops} compact />
+        </div>
       </section>
 
       {/* Interactive preview */}

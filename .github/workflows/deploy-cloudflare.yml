@@ -1,0 +1,108 @@
+name: Deploy private site (Cloudflare Pages + Access)
+
+# Builds the static site and uploads it to Cloudflare Pages ONLY after checking
+# that Cloudflare Access already protects the production hostname, every
+# preview/branch subdomain (*.<project>.pages.dev) and any custom domain.
+# If any check fails, nothing is deployed. See docs/PRIVATE_HOSTING.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy = build + protected deploy; create-project = create the empty Pages project only; verify = check Access only"
+        type: choice
+        options: [deploy, create-project, verify]
+        default: deploy
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-pages
+  cancel-in-progress: false
+
+env:
+  # Repository variables (Settings → Secrets and variables → Actions → Variables)
+  CF_PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT }}   # e.g. smartplant-calendar
+  CF_PAGES_HOST: ${{ vars.CF_PAGES_HOST }}         # e.g. smartplant-calendar.pages.dev (exact host Cloudflare assigned)
+  CF_EXTRA_HOSTS: ${{ vars.CF_EXTRA_HOSTS }}       # optional, comma-separated custom domains
+  ACTION: ${{ github.event.inputs.action || 'deploy' }}
+
+jobs:
+  private-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check configuration
+        id: cfg
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: |
+          # CF_PAGES_HOST is only known after the project exists, so create-project does not need it.
+          if [ "$HAS_TOKEN" != "true" ] || [ "$HAS_ACCOUNT" != "true" ] || [ -z "$CF_PAGES_PROJECT" ] \
+             || { [ -z "$CF_PAGES_HOST" ] && [ "$ACTION" != "create-project" ]; }; then
+            echo "::notice::Private hosting is not configured yet (see docs/PRIVATE_HOSTING.md). Nothing was built or deployed."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.configured == 'true'
+
+      - name: Create the Pages project (no deployment)
+        if: steps.cfg.outputs.configured == 'true' && env.ACTION == 'create-project'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.156.0"
+          command: pages project create ${{ env.CF_PAGES_PROJECT }} --production-branch=main
+
+      - name: Verify Cloudflare Access protects every hostname (before deploying)
+        if: steps.cfg.outputs.configured == 'true' && env.ACTION != 'create-project'
+        run: |
+          urls=("https://${CF_PAGES_HOST}/" "https://${CF_PAGES_HOST}/robots.txt" "https://${CF_PAGES_HOST}/_next/static/chunks/check.js"
+                "https://main.${CF_PAGES_HOST}/" "https://access-check-${GITHUB_RUN_ID}.${CF_PAGES_HOST}/")
+          IFS=',' read -ra extra <<< "${CF_EXTRA_HOSTS}"
+          for h in "${extra[@]}"; do h="$(echo "$h" | xargs)"; [ -n "$h" ] && urls+=("https://${h}/" "https://${h}/robots.txt"); done
+          bash scripts/verify-access.sh "${urls[@]}"
+
+      - uses: actions/setup-node@v4
+        if: steps.cfg.outputs.configured == 'true' && env.ACTION == 'deploy'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build static site (private, served from the domain root)
+        if: steps.cfg.outputs.configured == 'true' && env.ACTION == 'deploy'
+        run: |
+          npm ci
+          npx next build
+        env:
+          NEXT_PUBLIC_BASE_PATH: ""
+          NEXT_PUBLIC_SITE_URL: https://${{ vars.CF_PAGES_HOST }}
+          NEXT_PUBLIC_PRIVATE_SITE: "1"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: Upload to Cloudflare Pages (production branch)
+        id: upload
+        if: steps.cfg.outputs.configured == 'true' && env.ACTION == 'deploy'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.156.0"
+          command: pages deploy out --project-name=${{ env.CF_PAGES_PROJECT }} --branch=main --commit-dirty=true
+
+      - name: Verify the new deployment is protected too
+        if: steps.cfg.outputs.configured == 'true' && env.ACTION == 'deploy'
+        env:
+          DEPLOYMENT_URL: ${{ steps.upload.outputs.deployment-url }}
+        run: |
+          urls=("https://${CF_PAGES_HOST}/" "https://${CF_PAGES_HOST}/index.html")
+          [ -n "$DEPLOYMENT_URL" ] && urls+=("${DEPLOYMENT_URL%/}/" "${DEPLOYMENT_URL%/}/index.html")
+          bash scripts/verify-access.sh "${urls[@]}"
