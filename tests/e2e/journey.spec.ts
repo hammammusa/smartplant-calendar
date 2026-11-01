@@ -32,7 +32,7 @@ test("guest can plan a crop and manage tasks in the calendar", async ({ page, is
   await go(page, "/");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("ازرع في الوقت المناسب");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("شو بدك تزرع");
   await expectNoStrayEnglish(page);
 
   // Browse and search crops.
@@ -196,7 +196,7 @@ test("every page opens directly and survives a browser refresh under the sub-pat
     if (r.status() >= 400 && r.url().includes(BASE) && !r.url().includes("does-not-exist")) failed.push(`${r.status()} ${r.url()}`);
   });
   const pages: [string, RegExp][] = [
-    ["/", /ازرع في الوقت المناسب/],
+    ["/", /شو بدك تزرع/],
     ["/crops/", /ماذا تريد أن تزرع؟/],
     ["/crops/olive/", /الزيتون/],
     ["/planner/", /أنشئ خطتك الزراعية/],
@@ -232,7 +232,7 @@ test("every page opens directly and survives a browser refresh under the sub-pat
 test("client-side navigation keeps the sub-path and guest data persists after reload", async ({ page }) => {
   await seedLocation(page, HEBRON);
   await go(page, "/");
-  await page.getByRole("link", { name: /ابدأ خطتك الزراعية/ }).first().click();
+  await page.getByRole("link", { name: /خطة زراعية جديدة/ }).first().click();
   await expect(page).toHaveURL(new RegExp(`${BASE}/planner/$`));
   await page.getByRole("button", { name: "التالي" }).click();
   await page.getByRole("radio", { name: /شرفة/ }).click();

@@ -36,7 +36,7 @@ const STATUS_META: Record<RecommendationStatus, { title: string; badge: string; 
 
 const PREFS_KEY = "smartplant:recommendation-prefs:v1";
 
-function readPrefs(): { space: SpaceType; method: MethodGroup } {
+export function readRecommendationPrefs(): { space: SpaceType; method: MethodGroup } {
   try {
     const raw = window.localStorage.getItem(PREFS_KEY);
     if (raw) {
@@ -130,7 +130,7 @@ export function RecommendationsView({ crops, compact = false }: { crops: Crop[];
   const weather = useWeather();
   const [prefs, setPrefs] = useState<{ space: SpaceType; method: MethodGroup } | null>(null);
   const [customDate, setCustomDate] = useState<string>("");
-  const current = prefs ?? (mode === "loading" ? { space: "home_garden" as SpaceType, method: "all" as MethodGroup } : readPrefs());
+  const current = prefs ?? (mode === "loading" ? { space: "home_garden" as SpaceType, method: "all" as MethodGroup } : readRecommendationPrefs());
   const date = customDate && isValidISODate(customDate) ? customDate : today;
   const weatherState = weather.state;
   const alerts = useMemo(

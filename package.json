@@ -14,6 +14,7 @@
     "test:db": "bash tests/db/run.sh",
     "build:pages": "NEXT_PUBLIC_BASE_PATH= NEXT_PUBLIC_SITE_URL=https://smartplantcalendar.github.io next build",
     "serve:pages": "node scripts/serve-static.mjs 3200",
+    "images:home": "node scripts/optimize-home-photo.mjs",
     "test:scripts": "bash tests/scripts/verify-access.test.sh"
   },
   "dependencies": {
