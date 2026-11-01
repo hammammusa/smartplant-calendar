@@ -7,6 +7,7 @@
  */
 import { generatePlan } from "@/domain/plan-generator";
 import type { PlanRequest, TaskInput, TaskPatch } from "@/domain/schemas";
+import { normalizeLocation, type SavedLocation } from "@/domain/location";
 import type { Crop, Garden, Planting, Task, UserDataSnapshot } from "@/domain/types";
 import { newId } from "@/lib/utils";
 
@@ -48,26 +49,21 @@ export function clearLocal() {
   }
 }
 
-export interface SavedLocation {
-  regionId: string | null;
-  zone: Garden["zone"] | null;
-  latitude: number | null;
-  longitude: number | null;
-  timezone: string;
-}
+export type { SavedLocation };
 
 export function readLocation(): SavedLocation | null {
   try {
     const raw = window.localStorage.getItem(LOCATION_KEY);
-    return raw ? (JSON.parse(raw) as SavedLocation) : null;
+    return raw ? normalizeLocation(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
 }
 
-export function writeLocation(loc: SavedLocation) {
+export function writeLocation(loc: SavedLocation | null) {
   try {
-    window.localStorage.setItem(LOCATION_KEY, JSON.stringify(loc));
+    if (loc) window.localStorage.setItem(LOCATION_KEY, JSON.stringify(loc));
+    else window.localStorage.removeItem(LOCATION_KEY);
   } catch {
     /* ignore */
   }

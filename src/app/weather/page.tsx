@@ -2,7 +2,7 @@ import { Info } from "lucide-react";
 import { absoluteUrl } from "@/lib/env";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
-import { WeatherLocationPicker } from "@/components/weather/location-picker";
+import { LocationSummary } from "@/components/location/location-summary";
 import { WeatherPanel } from "@/components/weather/weather-widget";
 import { getWeatherThresholds } from "@/services/content";
 import { formatNumber } from "@/lib/format";
@@ -23,7 +23,7 @@ export default async function WeatherPage() {
         title="طقس منطقتك وتنبيهاتها الزراعية"
         description="نعرض توقعات الأيام القادمة كما يوفرها مزود الطقس فقط، دون توقعات طويلة المدى غير موثوقة."
       />
-      <WeatherLocationPicker />
+      <LocationSummary />
       <WeatherPanel />
       <section className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-border bg-surface p-5">

@@ -21,7 +21,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { findRegion } from "@/data/regions";
+import { coordsForServices } from "@/domain/location";
 import { describeWeatherCode, type WeatherIcon } from "@/domain/weather";
 import { fetchWeather, type WeatherPayload, type WeatherResult } from "@/lib/weather-client";
 import { formatDate, formatDateTime, formatNumber, WEEKDAYS } from "@/lib/format";
@@ -46,10 +46,11 @@ const t = (v: number | null) => (v == null ? "—" : `${formatNumber(Math.round(
 
 export function useWeather() {
   const { location, mode } = useAppData();
-  const region = findRegion(location?.regionId);
-  const lat = location?.latitude ?? region?.latitude ?? null;
-  const lon = location?.longitude ?? region?.longitude ?? null;
-  const tz = location?.timezone ?? region?.timezone ?? "Asia/Hebron";
+  // Real (rounded) coordinates of the confirmed location — only with consent for GPS/map points.
+  const coords = coordsForServices(location);
+  const lat = coords?.latitude ?? null;
+  const lon = coords?.longitude ?? null;
+  const tz = location?.timezone ?? "Asia/Hebron";
   const key = `${lat},${lon},${tz}`;
   const [result, setResult] = useState<{ key: string; value: Loaded } | null>(null);
   const [nonce, setNonce] = useState(0);
@@ -68,15 +69,32 @@ export function useWeather() {
   const state: State = result && result.key === `${key}#${nonce}` ? result.value : { status: "loading" };
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { state, reload, hasLocation: lat != null && lon != null, placeName: region?.name ?? null, timezone: tz };
+  return {
+    state,
+    reload,
+    hasLocation: lat != null && lon != null,
+    needsConsent: !!location && coords === null,
+    placeName: location?.label ?? null,
+    timezone: tz,
+  };
+}
+
+function NeedsConsent() {
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <p className="flex items-center gap-2 font-bold"><MapPin className="size-5 text-brand-600" aria-hidden /> الطقس يحتاج موافقتك</p>
+      <p className="text-sm text-muted-foreground">موقعك المحفوظ دقيق (GPS أو خريطة)، ولن نرسله إلى خدمة الطقس دون موافقتك. فعّل الموافقة من صفحة الموقع.</p>
+      <Button asChild size="sm" variant="outline"><Link href="/location">الموافقة من صفحة الموقع</Link></Button>
+    </div>
+  );
 }
 
 function NoLocation() {
   return (
     <div className="flex flex-col items-start gap-3">
       <p className="flex items-center gap-2 font-bold"><MapPin className="size-5 text-brand-600" aria-hidden /> حدّد موقعك لعرض الطقس</p>
-      <p className="text-sm text-muted-foreground">اختر مدينتك في مولّد الخطط أو في ملفك الشخصي لنعرض لك توقعات الطقس المحلية.</p>
-      <Button asChild size="sm" variant="outline"><Link href="/planner">تحديد الموقع</Link></Button>
+      <p className="text-sm text-muted-foreground">حدّد موقع أرضك لنعرض لك توقعات الطقس المحلية.</p>
+      <Button asChild size="sm" variant="outline"><Link href="/location">تحديد الموقع</Link></Button>
     </div>
   );
 }
@@ -93,14 +111,16 @@ function ErrorBox({ message, onRetry }: { message: string; onRetry: () => void }
 
 /** Compact card for the dashboard. */
 export function WeatherCard() {
-  const { state, reload, hasLocation, placeName, timezone } = useWeather();
+  const { state, reload, hasLocation, needsConsent, placeName, timezone } = useWeather();
   return (
     <section aria-labelledby="weather-card" className="rounded-2xl border border-border bg-surface p-5 shadow-xs">
       <div className="mb-3 flex items-center justify-between">
         <h2 id="weather-card" className="font-bold">الطقس{placeName ? ` في ${placeName}` : ""}</h2>
         <Link href="/weather" className="text-sm font-semibold text-brand-600 hover:underline">التفاصيل</Link>
       </div>
-      {!hasLocation ? (
+      {needsConsent ? (
+        <NeedsConsent />
+      ) : !hasLocation ? (
         <NoLocation />
       ) : state.status === "error" ? (
         <ErrorBox message={state.message} onRetry={reload} />
@@ -175,7 +195,7 @@ function WeatherSummary({ data, timezone, compact }: { data: WeatherPayload; tim
 
 /** Full page panel. */
 export function WeatherPanel() {
-  const { state, reload, hasLocation, placeName, timezone } = useWeather();
+  const { state, reload, hasLocation, needsConsent, placeName, timezone } = useWeather();
   return (
     <section className="rounded-2xl border border-border bg-surface p-5 shadow-xs sm:p-6" aria-label="توقعات الطقس">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -184,7 +204,9 @@ export function WeatherPanel() {
           <Button size="sm" variant="ghost" onClick={reload}><RefreshCw /> تحديث</Button>
         ) : null}
       </div>
-      {!hasLocation ? (
+      {needsConsent ? (
+        <NeedsConsent />
+      ) : !hasLocation ? (
         <NoLocation />
       ) : state.status === "error" ? (
         <ErrorBox message={state.message} onRetry={reload} />

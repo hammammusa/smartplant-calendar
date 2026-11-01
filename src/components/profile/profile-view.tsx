@@ -5,10 +5,11 @@ import { LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { getProfileAction, updateNotificationPrefsAction, updateProfileAction, type ProfileData } from "@/data-access/user-data";
+import { LocationSummary } from "@/components/location/location-summary";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, EmptyState, Spinner } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, Select } from "@/components/ui/form-controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { COUNTRIES, findRegion, REGIONS } from "@/data/regions";
-import { CLIMATE_ZONE_LABELS } from "@/domain/labels";
-import { CLIMATE_ZONES, type ClimateZone } from "@/domain/types";
+import type { ClimateZone } from "@/domain/types";
 import { isSupabaseConfigured } from "@/lib/env";
 
 const TIMEZONES = [
@@ -46,7 +45,6 @@ export function ProfileView() {
   const [prefs, setPrefs] = useState({ inAppEnabled: true, reminderDaysBefore: 1 });
   const [savingPrefs, setSavingPrefs] = useState(false);
   const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { fullName: "", regionId: "", zone: "", timezone: "Asia/Hebron" } });
-  const regionId = useWatch({ control: form.control, name: "regionId" });
 
   useEffect(() => {
     if (app.mode !== "remote") return;
@@ -98,28 +96,27 @@ export function ProfileView() {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <Card>
         <CardHeader>
-          <CardTitle>البيانات الشخصية والموقع المفضل</CardTitle>
-          <CardDescription>نستخدم موقعك المفضل للطقس ولاقتراح المنطقة المناخية في خططك الجديدة.</CardDescription>
+          <CardTitle>البيانات الشخصية والموقع</CardTitle>
+          <CardDescription>نستخدم موقع أرضك المؤكد للطقس وللاقتراحات الزراعية ولخططك الجديدة.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
             noValidate
             className="grid gap-4 sm:grid-cols-2"
             onSubmit={form.handleSubmit(async (v) => {
-              const region = findRegion(v.regionId);
+              // Location fields are managed on /location; keep the saved values.
+              const loc = app.location;
               const payload = {
                 fullName: v.fullName,
-                regionId: region?.id ?? null,
-                zone: (v.zone || region?.zone || null) as ClimateZone | null,
+                regionId: loc?.regionId ?? profile.regionId,
+                zone: (loc?.zone ?? profile.zone ?? null) as ClimateZone | null,
                 timezone: v.timezone,
-                latitude: region?.latitude ?? null,
-                longitude: region?.longitude ?? null,
+                latitude: loc?.latitude ?? profile.latitude,
+                longitude: loc?.longitude ?? profile.longitude,
               };
               const res = await updateProfileAction(payload);
               if (!res.ok) return void toast.error(res.error);
-              if (region) {
-                app.setLocation({ regionId: region.id, zone: payload.zone, latitude: region.latitude, longitude: region.longitude, timezone: v.timezone });
-              }
+              if (loc && loc.timezone !== v.timezone) await app.setLocation({ ...loc, timezone: v.timezone });
               toast.success("تم حفظ ملفك الشخصي");
             })}
           >
@@ -129,37 +126,10 @@ export function ProfileView() {
             <Field label="البريد الإلكتروني" htmlFor="email" className="sm:col-span-2" hint="لا يمكن تغييره من هنا حاليًا.">
               <Input id="email" value={profile.email ?? ""} dir="ltr" readOnly disabled />
             </Field>
-            <Field label="المدينة" htmlFor="regionId">
-              <Select
-                id="regionId"
-                {...form.register("regionId", {
-                  onChange: (e) => {
-                    const r = findRegion(e.target.value);
-                    if (r) {
-                      form.setValue("zone", r.zone);
-                      form.setValue("timezone", r.timezone);
-                    }
-                  },
-                })}
-              >
-                <option value="">لم تُحدد</option>
-                {COUNTRIES.map((c) => (
-                  <optgroup key={c.code} label={c.name}>
-                    {REGIONS.filter((r) => r.countryCode === c.code).map((r) => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </Select>
-            </Field>
-            <Field label="المنطقة المناخية" htmlFor="zone" hint={regionId ? undefined : "اختر المدينة أولًا"}>
-              <Select id="zone" {...form.register("zone")}>
-                <option value="">تلقائي حسب المدينة</option>
-                {CLIMATE_ZONES.map((z) => (
-                  <option key={z} value={z}>{CLIMATE_ZONE_LABELS[z]}</option>
-                ))}
-              </Select>
-            </Field>
+            <div className="sm:col-span-2">
+              <p className="mb-2 text-sm font-semibold">موقع أرضك</p>
+              <LocationSummary />
+            </div>
             <Field label="المنطقة الزمنية" htmlFor="timezone" className="sm:col-span-2">
               <Select id="timezone" {...form.register("timezone")}>
                 {TIMEZONES.map((t) => (
