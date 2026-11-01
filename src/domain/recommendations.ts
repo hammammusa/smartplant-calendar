@@ -102,7 +102,9 @@ export function recommendCrop(crop: Crop, input: RecommendationInput): Recommend
   const zoneLabel = CLIMATE_ZONE_LABELS[zone];
   const windows = crop.windows.filter((w) => w.zone === zone && methodAllowed(w.method, group));
   const noRulesSpace = SPACES_WITHOUT_RULES.includes(spaceType);
-  const spaceSuitable = noRulesSpace || crop.spaceTypes.includes(spaceType);
+  // An empty list means "not documented yet", not "unsuitable everywhere".
+  const spaceUnknown = crop.spaceTypes.length === 0;
+  const spaceSuitable = noRulesSpace || spaceUnknown || crop.spaceTypes.includes(spaceType);
   const reasons: string[] = [];
   const warnings: string[] = [];
 
@@ -123,6 +125,9 @@ export function recommendCrop(crop: Crop, input: RecommendationInput): Recommend
     return { ...base, status: "no_data", activeWindow: null, method: null, daysLeftInWindow: null, nextWindowStart: null, daysUntilNextWindow: null };
   }
 
+  if (spaceUnknown && !noRulesSpace) {
+    reasons.push("لم نوثّق بعد أنواع المساحات المناسبة له.");
+  }
   if (!spaceSuitable) {
     reasons.push(`لا يُعد مناسبًا عادةً لـ«${SPACE_TYPE_LABELS[spaceType]}» حسب بيانات المحصول.`);
   }

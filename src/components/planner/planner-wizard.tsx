@@ -356,7 +356,7 @@ function PlannerWizardInner({ crops, zoneOverrides = {} }: { crops: Crop[]; zone
                 const active = selected.includes(c.slug);
                 const thisMonth = monthOf(app.today);
                 const ws = windowsForZone(c, zone);
-                const suitable = space ? c.spaceTypes.includes(space) : true;
+                const suitable = space ? c.spaceTypes.length === 0 || c.spaceTypes.includes(space) : true;
                 const nowOk = ws.some((w) => (w.startMonth <= w.endMonth ? thisMonth >= w.startMonth && thisMonth <= w.endMonth : thisMonth >= w.startMonth || thisMonth <= w.endMonth));
                 return (
                   <button

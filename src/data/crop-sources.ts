@@ -13,6 +13,8 @@
  */
 export interface CropSource {
   id: string;
+  /** How the text was obtained, for "used" references. */
+  readVia?: string;
   title: string;
   publisher: string;
   url: string;
@@ -24,6 +26,71 @@ export interface CropSource {
 }
 
 export const CROP_SOURCES: CropSource[] = [
+  {
+    id: "moa-ps-okra",
+    title: "دليل المزارع: زراعة البامية",
+    publisher: "وزارة الزراعة الفلسطينية",
+    url: "https://www.moa.pna.ps/ar/farmers-guides/zraaa-albamy",
+    covers: "مواعيد بدء زراعة البامية المروية في المحافظات الفلسطينية وفي أريحا والأغوار.",
+    status: "used",
+    readVia:
+      "نصّ الفقرة نقله صاحب المشروع من الدليل الرسمي (لم يكن الموقع متاحًا من بيئة البناء). يُستحسن مطابقته مع الصفحة الأصلية.",
+    crops: ["okra"],
+  },
+  {
+    id: "narc-okra",
+    title: "الدليل الفني لإنتاج البامية في الأردن",
+    publisher: "المركز الوطني للبحوث الزراعية (الأردن)",
+    url: "https://www.narc.gov.jo/ebv4.0/root_storage/ar/eb_list_page/okra.pdf",
+    covers: "عروات البامية في الأغوار والمرتفعات الأردنية. لم يُقرأ النص الكامل؛ ولا تُنقل مواعيد الأردن إلى فلسطين دون مراجعة مناخية.",
+    status: "to_review",
+    crops: ["okra"],
+  },
+  {
+    id: "narc-sage",
+    title: "الدليل الفني لإنتاج المريمية في الأردن",
+    publisher: "المركز الوطني للبحوث الزراعية (الأردن)",
+    url: "https://www.narc.gov.jo/ebv4.0/root_storage/ar/eb_list_page/sage_book_-narc_logo.pdf",
+    covers: "إكثار المريمية وزراعتها.",
+    status: "to_review",
+    crops: ["sage"],
+  },
+  {
+    id: "narc-grape",
+    title: "الدليل الفني لإنتاج العنب في الأردن",
+    publisher: "المركز الوطني للبحوث الزراعية (الأردن)",
+    url: "https://www.narc.gov.jo/ebv4.0/root_storage/ar/eb_list_page/grape_book_-narc_logo.pdf",
+    covers: "زراعة غراس العنب وخدمتها.",
+    status: "to_review",
+    crops: ["grape"],
+  },
+  {
+    id: "narc-pomegranate",
+    title: "الدليل الفني لإنتاج الرمان في الأردن",
+    publisher: "المركز الوطني للبحوث الزراعية (الأردن)",
+    url: "https://www.narc.gov.jo/ebv4.0/root_storage/ar/eb_list_page/pomegranate.pdf",
+    covers: "زراعة غراس الرمان وخدمتها.",
+    status: "to_review",
+    crops: ["pomegranate"],
+  },
+  {
+    id: "narc-fresh-herbs",
+    title: "الدليل الفني لإنتاج الأعشاب الطازجة",
+    publisher: "المركز الوطني للبحوث الزراعية (الأردن)",
+    url: "https://www.narc.gov.jo/ebv4.0/root_storage/ar/eb_list_page/fresh_herbs.pdf",
+    covers: "إنتاج الأعشاب الطازجة (بقدونس، كزبرة، شبت، نعناع وغيرها).",
+    status: "to_review",
+    crops: ["parsley", "coriander", "dill", "mint", "basil", "arugula"],
+  },
+  {
+    id: "narc-bulletins",
+    title: "النشرات الإرشادية",
+    publisher: "المركز الوطني للبحوث الزراعية (الأردن)",
+    url: "https://narc.gov.jo/AR/List/%D8%A7%D9%84%D9%86%D8%B4%D8%B1%D8%A7%D8%AA_%D8%A7%D9%84%D8%A7%D8%B1%D8%B4%D8%A7%D8%AF%D9%8A%D8%A9",
+    covers: "قائمة النشرات الإرشادية لعدد من المحاصيل.",
+    status: "to_review",
+    crops: [],
+  },
   {
     id: "narc-tomato",
     title: "الدليل الفني لإنتاج البندورة في الأردن",
@@ -82,7 +149,7 @@ export const CROP_SOURCES: CropSource[] = [
     id: "moa-palestine",
     title: "النشرات الإرشادية لوزارة الزراعة الفلسطينية",
     publisher: "وزارة الزراعة الفلسطينية",
-    url: "https://www.moa.pna.ps/",
+    url: "https://www.moa.pna.ps/ar",
     covers: "المصدر المحلي المفضّل لمواعيد الزراعة في محافظات الضفة وغزة.",
     status: "to_review",
     crops: [],
@@ -91,4 +158,8 @@ export const CROP_SOURCES: CropSource[] = [
 
 export function sourcesForCrop(slug: string): CropSource[] {
   return CROP_SOURCES.filter((s) => s.crops.includes(slug));
+}
+
+export function findSource(id: string | undefined): CropSource | undefined {
+  return id ? CROP_SOURCES.find((s) => s.id === id) : undefined;
 }

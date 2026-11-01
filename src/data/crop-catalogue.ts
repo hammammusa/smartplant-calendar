@@ -11,6 +11,7 @@
  * كافية» and the crop cannot be added to a plan.
  */
 import type { Crop, CropCategory, LifeCycle, PlantingMethod } from "@/domain/types";
+import { DOCUMENTED_CROPS } from "./crop-documented";
 
 type Entry = [
   slug: string,
@@ -142,28 +143,31 @@ const ENTRIES: Entry[] = [
 const NOTE =
   "أضفنا الاسم والتصنيف وطرق الإكثار الشائعة فقط. لم نوثّق بعد مواعيد زراعته في مناطق فلسطين من مصدر موثوق، لذلك لا نعرض له موعدًا ولا خطة. راجع الإرشاد الزراعي في منطقتك.";
 
-export const CATALOGUE_CROPS: Crop[] = ENTRIES.map(([slug, name, otherNames, scientificName, category, lifeCycle, propagation]) => ({
-  id: `seed-${slug}`,
-  slug,
-  name,
-  otherNames,
-  scientificName,
-  category,
-  lifeCycle,
-  difficulty: null,
-  sun: null,
-  water: null,
-  propagation,
-  frostSensitive: false,
-  spaceTypes: [],
-  growthDaysMin: null,
-  growthDaysMax: null,
-  summary: `${name}: لم تُضف بعد معلومات زراعية موثّقة لهذا المحصول.`,
-  wateringSummary: "",
-  imageAlt: `رسم توضيحي: ${name}`,
-  dataStatus: "incomplete",
-  sourceNote: NOTE,
-  windows: [],
-  templates: [],
-  guide: [],
-}));
+export const CATALOGUE_CROPS: Crop[] = ENTRIES.map(([slug, name, otherNames, scientificName, category, lifeCycle, propagation]) => {
+  const documented = DOCUMENTED_CROPS[slug];
+  return {
+    id: `seed-${slug}`,
+    slug,
+    name,
+    otherNames,
+    scientificName,
+    category,
+    lifeCycle,
+    difficulty: null,
+    sun: null,
+    water: null,
+    propagation,
+    frostSensitive: false,
+    spaceTypes: [],
+    growthDaysMin: null,
+    growthDaysMax: null,
+    summary: documented?.summary ?? `${name}: لم تُضف بعد معلومات زراعية موثّقة لهذا المحصول.`,
+    wateringSummary: "",
+    imageAlt: `رسم توضيحي: ${name}`,
+    dataStatus: documented ? "preliminary" : "incomplete",
+    sourceNote: documented?.sourceNote ?? NOTE,
+    windows: documented?.windows ?? [],
+    templates: [],
+    guide: [],
+  };
+});

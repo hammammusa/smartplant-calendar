@@ -93,7 +93,7 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
   const rules = useForm<RulesForm, unknown, z.output<typeof adminCropRulesSchema>>({
     resolver: zodResolver(adminCropRulesSchema),
     defaultValues: {
-      windows: crop?.windows.map((w) => ({ ...w, note: w.note ?? "" })) ?? [],
+      windows: crop?.windows.map((w) => ({ ...w, note: w.note ?? "", sourceId: w.sourceId ?? "", sourceDetail: w.sourceDetail ?? "" })) ?? [],
       templates:
         crop?.templates.map((t) => ({
           key: t.key,
@@ -328,7 +328,7 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
                   <Button variant="danger-ghost" size="icon" aria-label="حذف الموعد" onClick={() => windows.remove(i)}><Trash2 /></Button>
                 </div>
               ))}
-              <Button variant="outline" className="self-start" onClick={() => windows.append({ zone: "highland", startMonth: 3, endMonth: 4, method: "transplanting", note: "" })}>
+              <Button variant="outline" className="self-start" onClick={() => windows.append({ zone: "highland", startMonth: 3, endMonth: 4, method: "transplanting", note: "", sourceId: "", sourceDetail: "" })}>
                 <Plus /> إضافة موعد
               </Button>
             </CardContent>

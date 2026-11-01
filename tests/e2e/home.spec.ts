@@ -126,8 +126,8 @@ test.describe("expanded crop catalogue", () => {
 
   test("an incomplete crop page says so and cannot be planned", async ({ page }) => {
     await seedLocation(page, HEBRON);
-    await go(page, "/crops/okra/");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("البامية");
+    await go(page, "/crops/eggplant/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("الباذنجان");
     await expect(page.getByText("معلومات غير مكتملة").first()).toBeVisible();
     await expect(page.getByTestId("planting-status")).toHaveAttribute("data-status", "no_data");
     await expect(page.getByRole("link", { name: /أنشئ خطة زراعة/ })).toHaveCount(0);
@@ -152,5 +152,38 @@ test.describe("expanded crop catalogue", () => {
     await seedLocation(gaza, { latitude: 31.5017, longitude: 34.4668, label: "غزة", regionId: "ps-gaza", zone: "coastal" });
     await go(gaza, "/crops/tomato/");
     await expect(gaza.getByTestId("planting-status")).not.toHaveAttribute("data-status", "now");
+  });
+
+  test("okra has sourced dates: now in Hebron in March, with the guide quoted", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-03-10T09:00:00+02:00"));
+    await seedLocation(page, HEBRON);
+    await go(page, "/crops/okra/");
+    await expect(page.getByTestId("planting-status")).toHaveAttribute("data-status", "now");
+    await expect(page.getByTestId("window-source").first()).toContainText("وزارة الزراعة الفلسطينية");
+    await expect(page.getByRole("heading", { name: "المصادر" })).toBeVisible();
+    await expect(page.getByText(/تبدأ زراعة البامية المروية في معظم المحافظات الفلسطينية خلال شهر آذار/)).toBeVisible();
+    await expect(page.getByRole("link", { name: /أنشئ خطة زراعة البامية/ })).toBeVisible();
+
+    await go(page, "/recommendations/");
+    await expect(page.getByTestId("rec-okra")).toHaveAttribute("data-status", "now");
+  });
+
+  test("okra can be planned with general tasks", async ({ page }) => {
+    await seedLocation(page, HEBRON);
+    await go(page, "/planner/?crop=okra");
+    await page.getByRole("button", { name: "التالي" }).click();
+    await page.getByRole("radio", { name: /حديقة/ }).first().click();
+    await page.getByRole("button", { name: "التالي" }).click();
+    await expect(page.getByRole("button", { name: /البامية/, pressed: true })).toBeVisible();
+  });
+
+  test("ambiguous names ask which crop is meant", async ({ page }) => {
+    await go(page, "/");
+    await search(page).fill("خوخ");
+    await expect(page.getByTestId("ambiguous-name")).toContainText("«الخوخ» اسم لأكثر من محصول");
+    await expect(page.getByRole("option", { name: /الدراق/ })).toContainText("قشرتها مخملية");
+    await expect(page.getByRole("option", { name: /البرقوق/ })).toContainText("قشرتها ملساء");
+    await go(page, "/crops/peach/");
+    await expect(page.getByTestId("other-meaning")).toContainText("البرقوق");
   });
 });

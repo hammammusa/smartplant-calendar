@@ -6,6 +6,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { Input, Label, Select } from "@/components/ui/form-controls";
+import { ambiguityFor } from "@/domain/ambiguous-names";
 import { filterCrops, type CropFilters } from "@/domain/crop-filter";
 import { CATEGORY_LABELS, CLIMATE_ZONE_LABELS, DIFFICULTY_LABELS, SEASON_LABELS, SPACE_TYPE_LABELS } from "@/domain/labels";
 import { CLIMATE_ZONES, CROP_CATEGORIES, DIFFICULTIES, SEASONS, SPACE_TYPES, type Crop } from "@/domain/types";
@@ -123,6 +124,15 @@ export function CropBrowser({ crops, initialQuery = "" }: { crops: Crop[]; initi
           </Button>
         ) : null}
       </div>
+
+      {(() => {
+        const a = ambiguityFor(deferred.query ?? "");
+        return a ? (
+          <p className="rounded-xl bg-info-soft px-4 py-3 text-sm text-info" data-testid="ambiguous-name">
+            «{a.name}» اسم لأكثر من محصول: {a.options.map((o) => o.hint).join("؛ ")}.
+          </p>
+        ) : null;
+      })()}
 
       {results.length === 0 ? (
         <EmptyState

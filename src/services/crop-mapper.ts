@@ -31,6 +31,8 @@ export interface CropRow {
     end_month: number;
     method: PlantingWindow["method"];
     note: string | null;
+    source_id?: string | null;
+    source_detail?: string | null;
     sort_order: number;
   }[];
   crop_task_templates?: {
@@ -82,6 +84,8 @@ export function mapCropRow(row: CropRow): Crop {
       endMonth: w.end_month,
       method: w.method,
       note: w.note ?? undefined,
+      sourceId: w.source_id ?? undefined,
+      sourceDetail: w.source_detail ?? undefined,
     })),
     templates: [...(row.crop_task_templates ?? [])].sort(bySort).map((t) => ({
       key: t.key,

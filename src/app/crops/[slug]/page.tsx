@@ -6,7 +6,8 @@ import { notFound } from "next/navigation";
 import { CropImage } from "@/components/brand/crop-image";
 import { growthLabel } from "@/components/crops/crop-card";
 import { PlantingStatus } from "@/components/crops/planting-status";
-import { sourcesForCrop } from "@/data/crop-sources";
+import { findSource, sourcesForCrop } from "@/data/crop-sources";
+import { otherMeanings } from "@/domain/ambiguous-names";
 import { isPlannable } from "@/domain/crop-search";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,10 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
   if (!crop) notFound();
 
   const plannable = isPlannable(crop);
-  const references = sourcesForCrop(crop.slug);
+  const usedSources = [...new Set(crop.windows.map((w) => w.sourceId).filter((id): id is string => Boolean(id)))]
+    .map((id) => findSource(id))
+    .filter((src) => src !== undefined);
+  const references = sourcesForCrop(crop.slug).filter((r) => r.status === "to_review");
   const notDocumented = "غير موثّق بعد";
   const facts: { icon: typeof Sun; label: string; value: string; note?: string }[] = [
     { icon: Sprout, label: "طرق الزراعة الشائعة", value: crop.propagation?.length ? crop.propagation.map((m) => METHOD_LABELS[m]).join("، ") : notDocumented },
@@ -105,6 +109,17 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
             </p>
           </div>
           <p className="text-lg leading-8 text-muted-foreground">{crop.summary}</p>
+          {otherMeanings(crop.slug).map((m) => (
+            <p key={m.name} className="rounded-xl bg-info-soft px-4 py-2.5 text-sm text-info" data-testid="other-meaning">
+              اسم «{m.name}» يُطلق أيضًا على:{" "}
+              {m.others.map((o, i) => (
+                <span key={o.slug}>
+                  {i ? "، " : ""}
+                  <Link href={`/crops/${o.slug}`} className="font-bold underline underline-offset-4">{o.hint.split(":")[0]}</Link>
+                </span>
+              ))}
+            </p>
+          ))}
           <div className="rounded-2xl border border-border bg-surface p-4 shadow-xs">
             <p className="mb-2 text-sm font-bold text-muted-foreground">موعده في منطقتك</p>
             <PlantingStatus crop={crop} />
@@ -162,6 +177,7 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
                     <th scope="col" className="px-4 py-3 text-start font-semibold">الفترة المقترحة</th>
                     <th scope="col" className="px-4 py-3 text-start font-semibold">الطريقة</th>
                     <th scope="col" className="px-4 py-3 text-start font-semibold">ملاحظة</th>
+                    <th scope="col" className="px-4 py-3 text-start font-semibold">المصدر</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -171,7 +187,7 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
                       return [
                         <tr key={zone}>
                           <th scope="row" className="px-4 py-3 text-start font-semibold">{CLIMATE_ZONE_LABELS[zone]}</th>
-                          <td colSpan={3} className="px-4 py-3 text-subtle-foreground">لا تتوفر بيانات لهذه المنطقة</td>
+                          <td colSpan={4} className="px-4 py-3 text-subtle-foreground">لا تتوفر بيانات موثّقة لهذه المنطقة</td>
                         </tr>,
                       ];
                     return ws.map((w, i) => (
@@ -184,6 +200,15 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
                         <td className="px-4 py-3 font-semibold text-brand-700">{formatMonthRange(w.startMonth, w.endMonth)}</td>
                         <td className="px-4 py-3">{METHOD_LABELS[w.method]}</td>
                         <td className="px-4 py-3 text-muted-foreground">{w.note ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground" data-testid="window-source">
+                          {findSource(w.sourceId) ? (
+                            <a href={findSource(w.sourceId)!.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-700 underline underline-offset-4">
+                              {findSource(w.sourceId)!.publisher}
+                            </a>
+                          ) : (
+                            "معرفة عامة أولية"
+                          )}
+                        </td>
                       </tr>
                     ));
                   })}
@@ -207,6 +232,31 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
           <Alert tone="warning" title="مصدر المعلومات ودرجة الثقة">
             {crop.sourceNote}
           </Alert>
+
+          {usedSources.length ? (
+            <section aria-labelledby="used-title">
+              <h2 id="used-title" className="mb-2 text-lg font-extrabold">المصادر</h2>
+              <ul className="space-y-3 text-sm">
+                {usedSources.map((r) => (
+                  <li key={r.id}>
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-start gap-1.5 font-semibold text-brand-700 underline-offset-4 hover:underline">
+                      <ExternalLink className="mt-1 size-4 shrink-0" aria-hidden />
+                      {r.title}
+                    </a>
+                    <span className="block text-muted-foreground">{r.publisher}</span>
+                    {crop.windows
+                      .filter((w) => w.sourceId === r.id && w.sourceDetail)
+                      .map((w) => w.sourceDetail)
+                      .filter((d, i, all) => all.indexOf(d) === i)
+                      .map((d) => (
+                        <blockquote key={d} className="mt-1 border-s-4 border-border-strong ps-3 text-muted-foreground">{d}</blockquote>
+                      ))}
+                    {r.readVia ? <span className="mt-1 block text-xs text-subtle-foreground">{r.readVia}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {references.length ? (
             <section aria-labelledby="refs-title">

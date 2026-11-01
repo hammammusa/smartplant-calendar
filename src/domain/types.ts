@@ -119,6 +119,10 @@ export interface PlantingWindow {
   endMonth: number;
   method: PlantingMethod;
   note?: string;
+  /** Id of the reference in src/data/crop-sources.ts this window comes from. */
+  sourceId?: string;
+  /** Where in the reference (section/paragraph) and what it says. */
+  sourceDetail?: string;
 }
 
 /**

@@ -141,9 +141,12 @@ export function searchCrops<T extends SearchableCrop>(crops: T[], query: string,
   return searchCropIndex(buildCropIndex(crops), query, limit);
 }
 
-/** Crops that have at least one planting window and task rules can be planned. */
-export function isPlannable(crop: Pick<Crop, "windows" | "templates" | "dataStatus">): boolean {
-  return crop.dataStatus !== "incomplete" && crop.windows.length > 0 && crop.templates.length > 0;
+/**
+ * Crops with at least one planting window can be planned (crops without
+ * their own task rules get general tasks from the plan generator).
+ */
+export function isPlannable(crop: Pick<Crop, "windows" | "dataStatus">): boolean {
+  return crop.dataStatus !== "incomplete" && crop.windows.length > 0;
 }
 
 /**

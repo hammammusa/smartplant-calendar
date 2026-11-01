@@ -167,14 +167,6 @@ export const adminCropSchema = z
     sourceNote: z.string().trim().max(600).optional().default(""),
     isPublished: z.boolean(),
   })
-  .refine((v) => v.dataStatus === "incomplete" || v.spaceTypes.length > 0, {
-    error: "اختر نوع مساحة واحدًا على الأقل",
-    path: ["spaceTypes"],
-  })
-  .refine((v) => v.dataStatus === "incomplete" || (v.difficulty !== null && v.sun !== null && v.water !== null), {
-    error: "حدد الصعوبة والشمس والري، أو اختر «معلومات غير مكتملة» إن لم تتوفر بيانات موثوقة",
-    path: ["dataStatus"],
-  })
   .refine(
     (v) => (v.growthDaysMin === null) === (v.growthDaysMax === null),
     { error: "أدخل الحد الأدنى والأقصى لمدة النمو معًا أو اتركهما فارغين", path: ["growthDaysMax"] },
@@ -191,6 +183,9 @@ export const adminWindowSchema = z.object({
   endMonth: month,
   method: z.enum(PLANTING_METHODS),
   note: z.string().trim().max(160).optional().default(""),
+  /** Kept from the loaded window so an admin save does not drop the reference. */
+  sourceId: z.union([z.string().regex(/^[a-z0-9-]{2,60}$/), z.literal("")]).optional().default(""),
+  sourceDetail: z.string().trim().max(600).optional().default(""),
 });
 
 export const adminTemplateSchema = z

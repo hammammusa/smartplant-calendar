@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useDeferredValue, useId, useMemo, useState } from "react";
 import { CropImage } from "@/components/brand/crop-image";
 import { useAppData } from "@/components/providers/app-data-provider";
+import { ambiguityFor } from "@/domain/ambiguous-names";
 import { buildCropIndex, normalizeArabic, searchCropIndex } from "@/domain/crop-search";
 import { describeSimpleStatus, simplePlantingStatus, windowsForZone, type SimpleStatusKind } from "@/domain/planting-windows";
 import type { ClimateZone, Crop } from "@/domain/types";
@@ -52,6 +53,7 @@ export function CropSearch({ crops, ref }: { crops: SearchCrop[]; ref?: React.Re
   const hintId = useId();
 
   const index = useMemo(() => buildCropIndex(crops), [crops]);
+  const ambiguous = ambiguityFor(deferred);
   const results = useMemo(() => (deferred.trim() ? searchCropIndex(index, deferred, MAX_RESULTS) : []), [index, deferred]);
   const showList = open && query.trim().length > 0;
   const zone = mode !== "loading" ? location?.zone ?? null : null;
@@ -161,8 +163,14 @@ export function CropSearch({ crops, ref }: { crops: SearchCrop[]; ref?: React.Re
           className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-border bg-surface shadow-lg animate-fade-in"
           onMouseDown={(e) => e.preventDefault()}
         >
+          {ambiguous ? (
+            <p className="border-b border-border bg-info-soft px-4 py-2.5 text-sm font-bold text-info" data-testid="ambiguous-name">
+              «{ambiguous.name}» اسم لأكثر من محصول. اختر المقصود:
+            </p>
+          ) : null}
           <ul id={listId} role="listbox" aria-label="نتائج البحث" className="max-h-[min(60vh,26rem)] overflow-y-auto p-1.5">
             {results.map((crop, i) => {
+              const hint = ambiguous?.options.find((o) => o.slug === crop.slug)?.hint;
               const months = zone ? windowText(crop, zone) : null;
               const status = zone ? simplePlantingStatus(crop, zone, today) : null;
               const alias = matchedAlias(crop, deferred);
@@ -186,6 +194,7 @@ export function CropSearch({ crops, ref }: { crops: SearchCrop[]; ref?: React.Re
                       {crop.name}
                       {alias ? <span className="ms-1.5 text-sm font-semibold text-muted-foreground">({alias})</span> : null}
                     </p>
+                    {hint ? <p className="text-sm font-semibold text-foreground">{hint}</p> : null}
                     {status ? (
                       <>
                         <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-bold", STATUS_TONE[status.kind])}>

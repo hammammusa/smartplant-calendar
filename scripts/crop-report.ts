@@ -21,5 +21,13 @@ for (const z of CLIMATE_ZONES) {
   const n = SEED_CROPS.filter((c) => c.windows.some((w) => w.zone === z)).length;
   console.log(`  ${CLIMATE_ZONE_LABELS[z]}: ${n} من ${total} (${pct(n)})`);
 }
-const used = CROP_SOURCES.filter((s) => s.status === "used").length;
+const usedIds = new Set(CROP_SOURCES.filter((s) => s.status === "used").map((s) => s.id));
+console.log("مواعيد موثّقة بمصدر مستخدم (لكل منطقة):");
+for (const z of CLIMATE_ZONES) {
+  const n = SEED_CROPS.filter((c) => c.windows.some((w) => w.zone === z && w.sourceId && usedIds.has(w.sourceId))).length;
+  console.log(`  ${CLIMATE_ZONE_LABELS[z]}: ${n} من ${total} (${pct(n)})`);
+}
+const sourcedCrops = SEED_CROPS.filter((c) => c.windows.some((w) => w.sourceId && usedIds.has(w.sourceId)));
+console.log(`محاصيل لها مواعيد موثّقة بمصدر: ${sourcedCrops.length} (${sourcedCrops.map((c) => c.name).join("، ")})`);
+const used = usedIds.size;
 console.log(`المراجع: ${CROP_SOURCES.length} (مستخدمة: ${used}، بانتظار المراجعة: ${CROP_SOURCES.length - used})`);
