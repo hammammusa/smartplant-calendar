@@ -6,7 +6,7 @@
  */
 import { addDays, monthOf } from "@/lib/dates";
 import { formatShortDate } from "@/lib/format";
-import { CONTAINER_SPACES, SPACE_TYPE_LABELS } from "./labels";
+import { CONTAINER_SPACES, GREENHOUSE_NOTICE, SPACES_WITHOUT_RULES, SPACE_TYPE_LABELS } from "./labels";
 import { evaluateWindowFit, type WindowFit } from "./planting-windows";
 import type { ClimateZone, Crop, ISODate, SpaceType, TaskType } from "./types";
 
@@ -110,7 +110,9 @@ export function generatePlan(input: PlanInput): GeneratedPlan {
     warnings.push("لا تتوفر لدينا مواعيد زراعة لهذا المحصول في منطقتك المناخية، لذلك لا يمكن تقييم ملاءمة التاريخ.");
   }
 
-  if (!crop.spaceTypes.includes(spaceType)) {
+  if (SPACES_WITHOUT_RULES.includes(spaceType)) {
+    warnings.push(GREENHOUSE_NOTICE);
+  } else if (!crop.spaceTypes.includes(spaceType)) {
     warnings.push(
       `لا يُعد هذا المحصول مناسبًا عادةً لـ«${SPACE_TYPE_LABELS[spaceType]}». يمكنك المتابعة، لكن النتائج قد تكون محدودة.`,
     );

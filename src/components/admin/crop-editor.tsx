@@ -60,6 +60,7 @@ function toCropForm(c: Crop | null, published: boolean): CropForm {
     difficulty: c?.difficulty ?? "easy",
     sun: c?.sun ?? "full_sun",
     water: c?.water ?? "moderate",
+    frostSensitive: c?.frostSensitive ?? false,
     spaceTypes: c?.spaceTypes ?? ["home_garden"],
     growthDaysMin: c?.growthDaysMin ?? null,
     growthDaysMax: c?.growthDaysMax ?? null,
@@ -248,6 +249,9 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
               </div>
             </div>
 
+            <label className="flex items-center gap-2 text-sm font-semibold md:col-span-2">
+              <Checkbox {...form.register("frostSensitive")} /> حساس للصقيع (تظهر له تحذيرات الصقيع في الاقتراحات)
+            </label>
             <label className="flex items-center gap-2 text-sm font-semibold md:col-span-2">
               <Checkbox {...form.register("isPublished")} /> منشور ويظهر للزوار
             </label>

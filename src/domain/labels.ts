@@ -38,6 +38,7 @@ export const SPACE_TYPE_LABELS: Record<SpaceType, string> = {
   containers: "أصص زراعية",
   small_plot: "قطعة أرض صغيرة",
   farm: "مزرعة",
+  greenhouse: "بيت محمي",
 };
 
 export const SPACE_TYPE_DESCRIPTIONS: Record<SpaceType, string> = {
@@ -47,10 +48,20 @@ export const SPACE_TYPE_DESCRIPTIONS: Record<SpaceType, string> = {
   containers: "أوعية متنقلة بأحجام مختلفة",
   small_plot: "أرض مكشوفة حتى بضع مئات من الأمتار",
   farm: "مساحات إنتاجية أوسع",
+  greenhouse: "زراعة تحت غطاء (لا توجد قواعد خاصة به بعد)",
 };
 
 /** Spaces where plants grow in containers and soil dries faster. */
 export const CONTAINER_SPACES: SpaceType[] = ["rooftop", "balcony", "containers"];
+
+/**
+ * Space types without dedicated rules in the crop data. Recommendations and
+ * plans fall back to open-field windows for them and say so.
+ */
+export const SPACES_WITHOUT_RULES: SpaceType[] = ["greenhouse"];
+
+export const GREENHOUSE_NOTICE =
+  "لا تتوفر في بيانات المنصة حاليًا مواعيد خاصة بالبيوت المحمية، لذلك نعرض مواعيد الزراعة المكشوفة. البيت المحمي يقي عادةً من الصقيع الخفيف لكنه قد يرفع الحرارة كثيرًا؛ استشر مرشدًا زراعيًا لمواعيد العروات المحمية.";
 
 export const CATEGORY_LABELS: Record<CropCategory, string> = {
   fruiting_vegetable: "خضار ثمرية",

@@ -13,6 +13,7 @@ import {
   LocateFixed,
   Search,
   Sprout,
+  Tent,
   Tractor,
   Trees,
   type LucideIcon,
@@ -57,6 +58,7 @@ const SPACE_ICONS: Record<SpaceType, LucideIcon> = {
   containers: Sprout,
   small_plot: Fence,
   farm: Tractor,
+  greenhouse: Tent,
 };
 
 const detailsSchema = z.object({
