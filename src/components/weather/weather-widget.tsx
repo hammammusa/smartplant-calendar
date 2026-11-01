@@ -41,6 +41,7 @@ const ICONS: Record<WeatherIcon, LucideIcon> = {
 
 type Loaded = WeatherResult;
 type State = { status: "loading" } | Loaded;
+const LOADING: State = { status: "loading" };
 
 const t = (v: number | null) => (v == null ? "—" : `${formatNumber(Math.round(v), 0)}°`);
 
@@ -66,7 +67,7 @@ export function useWeather() {
     };
   }, [lat, lon, tz, key, nonce, mode]);
 
-  const state: State = result && result.key === `${key}#${nonce}` ? result.value : { status: "loading" };
+  const state: State = result && result.key === `${key}#${nonce}` ? result.value : LOADING;
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
   return {

@@ -3,6 +3,7 @@ import {
   CalendarDays,
   CloudSun,
   LayoutDashboard,
+  Lightbulb,
   ListChecks,
   Sprout,
   type LucideIcon,
@@ -16,6 +17,7 @@ export interface NavItem {
 
 export const MAIN_NAV: NavItem[] = [
   { href: "/crops", label: "دليل المحاصيل", icon: BookOpenText },
+  { href: "/recommendations", label: "ماذا أزرع الآن؟", icon: Lightbulb },
   { href: "/planner", label: "خطة زراعية", icon: Sprout },
   { href: "/calendar", label: "الرزنامة", icon: CalendarDays },
   { href: "/tasks", label: "المهام", icon: ListChecks },

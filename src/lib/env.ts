@@ -16,6 +16,12 @@ export const BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/
 /** Full public URL of the site root, including the base path, without trailing slash. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? `http://localhost:3000${BASE_PATH}`).replace(/\/$/, "");
 
+/**
+ * Private deployment (Cloudflare Pages behind Cloudflare Access): tells search
+ * engines not to index anything. Real protection is Access, not this flag.
+ */
+export const IS_PRIVATE_SITE = process.env.NEXT_PUBLIC_PRIVATE_SITE === "1";
+
 export const SITE_NAME = "رزنامة الزراعة الذكية";
 export const SITE_DESCRIPTION =
   "منصة عربية تساعدك على معرفة ماذا تزرع ومتى، وتنظّم الري والتسميد والحصاد في رزنامة واحدة وفق منطقتك وموسمك.";

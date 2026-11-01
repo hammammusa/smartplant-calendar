@@ -1,8 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
+import { BASE, go, seedLocation } from "./helpers";
 
-/** The site is served under the GitHub Pages sub-path; all URLs need it. */
-const BASE = process.env.E2E_BASE_PATH ?? "/smartplant-calendar";
-const go = (page: Page, path: string) => page.goto(`${BASE}${path}`);
+const HEBRON = { latitude: 31.5326, longitude: 35.0998, label: "الخليل", regionId: "ps-hebron", zone: "highland" as const };
+
+/** Planner step 1 without a saved location: pick a city from the list and confirm. */
+async function chooseCityInPlanner(page: Page, cityId: string) {
+  await page.getByRole("tab", { name: "قائمة المدن" }).click();
+  await page.getByLabel("المدينة").selectOption(cityId);
+  await page.getByRole("button", { name: "تأكيد الموقع وحفظه" }).click();
+}
 
 /**
  * Acceptance journey in preview/guest mode (no Supabase):
@@ -10,7 +16,7 @@ const go = (page: Page, path: string) => page.goto(`${BASE}${path}`);
  * edit a task → mark it complete. Also asserts there is no stray English UI.
  */
 
-const ENGLISH_ALLOWED = /Open-Meteo|Supabase|Solanum|Cucumis|Allium|Lactuca|Capsicum|Mentha|Origanum|Fragaria|Olea|Vitis|spp\.|ananassa|lycopersicum|sativus|tuberosum|cepa|sativum|annuum|syriacum|europaea|vinifera|×/g;
+const ENGLISH_ALLOWED = /Open-Meteo|OpenStreetMap|Nominatim|Copernicus|GPS|Supabase|Solanum|Cucumis|Allium|Lactuca|Capsicum|Mentha|Origanum|Fragaria|Olea|Vitis|spp\.|ananassa|lycopersicum|sativus|tuberosum|cepa|sativum|annuum|syriacum|europaea|vinifera|×/g;
 
 async function expectNoStrayEnglish(page: Page) {
   const text = await page.locator("body").innerText();
@@ -41,7 +47,7 @@ test("guest can plan a crop and manage tasks in the calendar", async ({ page, is
   // Planner wizard.
   await page.getByRole("link", { name: /أنشئ خطة زراعة البندورة/ }).click();
   await expect(page).toHaveURL(/\/planner\/?\?crop=tomato/);
-  await page.getByLabel("المحافظة أو المدينة").selectOption("ps-jericho");
+  await chooseCityInPlanner(page, "ps-jericho");
   await expect(page.getByRole("radio", { name: /غور/ })).toBeChecked();
   await page.getByRole("button", { name: "التالي" }).click();
   await page.getByRole("radio", { name: /سطح منزل/ }).click();
@@ -89,7 +95,7 @@ test("guest can plan a crop and manage tasks in the calendar", async ({ page, is
 
   if (isMobile) {
     await expect(page.getByRole("navigation", { name: "التنقل السريع" })).toBeVisible();
-    for (const path of ["/", "/crops", "/crops/tomato", "/planner", "/calendar", "/tasks", "/dashboard", "/weather"]) {
+    for (const path of ["/", "/crops", "/crops/tomato", "/planner", "/calendar", "/tasks", "/dashboard", "/weather", "/location/", "/recommendations/"]) {
       await go(page, path);
       // In mobile emulation the layout viewport grows when content overflows, so compare with the device width.
       const overflow = await page.evaluate(() => Math.max(window.innerWidth, document.documentElement.scrollWidth) - screen.width);
@@ -99,15 +105,16 @@ test("guest can plan a crop and manage tasks in the calendar", async ({ page, is
 });
 
 test("weather failure shows an Arabic message and the page keeps working", async ({ page }) => {
+  await seedLocation(page, HEBRON);
   await page.route("https://api.open-meteo.com/**", (route) => route.fulfill({ status: 503, body: "unavailable" }));
   await go(page, "/weather");
-  await page.getByLabel("المدينة").selectOption("ps-hebron");
   await expect(page.getByText("الطقس غير متاح الآن")).toBeVisible();
   await expect(page.getByRole("button", { name: "إعادة المحاولة" })).toBeVisible();
   await expectNoStrayEnglish(page);
 });
 
 test("weather renders forecast and agricultural alerts from the API", async ({ page }) => {
+  await seedLocation(page, HEBRON);
   const days = Array.from({ length: 7 }, (_, i) => `2026-11-0${i + 1}`);
   await page.route("https://api.open-meteo.com/**", (route) =>
     route.fulfill({
@@ -132,7 +139,6 @@ test("weather renders forecast and agricultural alerts from the API", async ({ p
     }),
   );
   await go(page, "/weather");
-  await page.getByLabel("المدينة").selectOption("ps-hebron");
   await expect(page.getByText("19°")).toBeVisible();
   await expect(page.getByText(/احتمال صقيع —/)).toBeVisible();
   await expect(page.getByText(/احتمال أمطار —/)).toBeVisible();
@@ -141,6 +147,7 @@ test("weather renders forecast and agricultural alerts from the API", async ({ p
 });
 
 test("planting in the past can mark earlier tasks as completed", async ({ page }) => {
+  await seedLocation(page, HEBRON);
   const d = new Date(Date.now() - 20 * 86_400_000).toISOString().slice(0, 10);
   await go(page, "/planner?crop=lettuce");
   await page.getByRole("button", { name: "التالي" }).click();
@@ -196,6 +203,8 @@ test("every page opens directly and survives a browser refresh under the sub-pat
     ["/calendar/", /رزنامتي الزراعية/],
     ["/tasks/", /المهام والتذكيرات/],
     ["/weather/", /طقس منطقتك/],
+    ["/location/", /حدّد موقع أرضك بدقة/],
+    ["/recommendations/", /ماذا أزرع الآن في منطقتي؟/],
     ["/privacy/", /سياسة الخصوصية/],
     ["/admin/crops/edit/", /لوحة الإدارة تتطلب/],
   ];
@@ -221,6 +230,7 @@ test("every page opens directly and survives a browser refresh under the sub-pat
 });
 
 test("client-side navigation keeps the sub-path and guest data persists after reload", async ({ page }) => {
+  await seedLocation(page, HEBRON);
   await go(page, "/");
   await page.getByRole("link", { name: /ابدأ خطتك الزراعية/ }).first().click();
   await expect(page).toHaveURL(new RegExp(`${BASE}/planner/$`));

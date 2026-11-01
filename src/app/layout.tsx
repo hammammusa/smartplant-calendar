@@ -10,7 +10,7 @@ import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { AppDataProvider } from "@/components/providers/app-data-provider";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/env";
+import { IS_PRIVATE_SITE, SITE_DESCRIPTION, SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/env";
 
 export const metadata: Metadata = {
   metadataBase: new URL(`${SITE_URL}/`),
@@ -28,6 +28,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
   alternates: { canonical: absoluteUrl("/") },
   referrer: "strict-origin-when-cross-origin",
+  ...(IS_PRIVATE_SITE ? { robots: { index: false, follow: false, nocache: true } } : {}),
 };
 
 export const viewport: Viewport = {

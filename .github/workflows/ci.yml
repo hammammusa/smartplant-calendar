@@ -24,6 +24,14 @@ jobs:
         run: |
           test -f out/index.html && test -f out/404.html && test -f out/crops/tomato/index.html
           grep -q '/smartplant-calendar/_next/static/' out/index.html
+      - name: Private build (Cloudflare Pages) is served from the root and not indexable
+        run: |
+          NEXT_PUBLIC_BASE_PATH="" NEXT_PUBLIC_PRIVATE_SITE=1 NEXT_PUBLIC_SITE_URL=https://example.pages.dev npx next build
+          grep -q '"/_next/static/' out/index.html
+          grep -q 'noindex' out/index.html
+          grep -q 'Disallow: /' out/robots.txt
+      - name: Access verification script
+        run: npm run test:scripts
 
   database:
     runs-on: ubuntu-latest
