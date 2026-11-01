@@ -6,7 +6,7 @@ import { generatePlan } from "@/domain/plan-generator";
 import { SEED_CROPS } from "@/data/crops";
 import { filterCrops } from "@/domain/crop-filter";
 import { buildCropIndex, editDistance, isPlannable, normalizeArabic, searchCropIndex } from "@/domain/crop-search";
-import { describeSimpleStatus, simplePlantingStatus, windowsForZone } from "@/domain/planting-windows";
+import { describeSimpleStatus, simplePlantingStatus, windowAppliesToCountry, windowsForZone } from "@/domain/planting-windows";
 import { countryOfLocation } from "@/domain/location";
 import { recommendCrops } from "@/domain/recommendations";
 import { CROP_CATEGORIES, PLANTING_METHODS } from "@/domain/types";
@@ -169,23 +169,23 @@ describe("simple planting status in Hebron, Gaza and Jericho", () => {
 
   it("okra follows the Palestinian guide: March in most governorates, January in Jericho", () => {
     const okra = crop("okra");
-    expect(simplePlantingStatus(okra, "highland", "2026-03-10").kind).toBe("now"); // الخليل
-    expect(simplePlantingStatus(okra, "inland_plain", "2026-03-10").kind).toBe("now");
-    expect(simplePlantingStatus(okra, "jordan_valley", "2026-01-15").kind).toBe("now"); // أريحا
-    expect(simplePlantingStatus(okra, "jordan_valley", "2026-03-10").kind).toBe("later");
+    expect(simplePlantingStatus(okra, "highland", "2026-03-10", "PS").kind).toBe("now"); // الخليل
+    expect(simplePlantingStatus(okra, "inland_plain", "2026-03-10", "PS").kind).toBe("now");
+    expect(simplePlantingStatus(okra, "jordan_valley", "2026-01-15", "PS").kind).toBe("now"); // أريحا
+    expect(simplePlantingStatus(okra, "jordan_valley", "2026-03-10", "PS").kind).toBe("later");
     // Season lasting until October is NOT a sowing window.
-    expect(simplePlantingStatus(okra, "highland", "2026-07-01").kind).toBe("later");
-    expect(simplePlantingStatus(okra, "highland", "2026-02-10").kind).toBe("soon");
+    expect(simplePlantingStatus(okra, "highland", "2026-07-01", "PS").kind).toBe("later");
+    expect(simplePlantingStatus(okra, "highland", "2026-02-10", "PS").kind).toBe("soon");
     // Gaza (coast) and arid areas are not named by the passage.
-    expect(simplePlantingStatus(okra, "coastal", "2026-03-10").kind).toBe("no_data");
-    expect(simplePlantingStatus(okra, "arid", "2026-03-10").kind).toBe("no_data");
+    expect(simplePlantingStatus(okra, "coastal", "2026-03-10", "PS").kind).toBe("no_data");
+    expect(simplePlantingStatus(okra, "arid", "2026-03-10", "PS").kind).toBe("no_data");
     expect(okra.windows.every((w) => w.method === "direct_sowing")).toBe(true);
   });
 
   it("a documented crop without task rules gets general tasks and no harvest date", () => {
     const okra = crop("okra");
     expect(isPlannable(okra)).toBe(true);
-    const plan = generatePlan({ crop: okra, plantedOn: "2026-03-10", zone: "highland", spaceType: "home_garden" });
+    const plan = generatePlan({ crop: okra, plantedOn: "2026-03-10", zone: "highland", spaceType: "home_garden", country: "PS" });
     expect(plan.windowFit).toBe("in_window");
     expect(plan.expectedHarvestStart).toBeNull();
     expect(plan.tasks.some((t) => t.type === "harvest")).toBe(false);
@@ -291,10 +291,44 @@ describe("general Palestinian dates (wafa.ps) and country scope", () => {
     expect(jo.windowFit).toBe("no_data");
   });
 
-  it("finds the country of a saved location", () => {
-    expect(countryOfLocation({ regionId: "ps-hebron", latitude: 31.53, longitude: 35.1 })).toBe("PS");
-    expect(countryOfLocation({ regionId: "jo-amman", latitude: 31.95, longitude: 35.93 })).toBe("JO");
-    expect(countryOfLocation({ regionId: null, latitude: 31.95, longitude: 35.93 })).toBe("JO");
-    expect(countryOfLocation({ regionId: null, latitude: 31.53, longitude: 35.1 })).toBe("PS");
+  it("never applies country-scoped dates when the country is unknown", () => {
+    const ps = { zone: "highland" as const, countryCode: "PS", startMonth: 11, endMonth: 12, method: "direct_sowing" as const };
+    const open = { zone: "highland" as const, startMonth: 11, endMonth: 12, method: "direct_sowing" as const };
+    expect(windowAppliesToCountry(ps, null)).toBe(false);
+    expect(windowAppliesToCountry(ps, undefined)).toBe(false);
+    expect(windowAppliesToCountry(ps, "PS")).toBe(true);
+    expect(windowAppliesToCountry(open, null)).toBe(true);
+    for (const country of [null, undefined]) {
+      expect(simplePlantingStatus(crop("wheat"), "highland", "2026-11-10", country).kind).toBe("no_data");
+      expect(simplePlantingStatus(crop("okra"), "jordan_valley", "2026-01-15", country).kind).toBe("no_data");
+      // Unscoped Levant data still answers.
+      expect(simplePlantingStatus(crop("tomato"), "jordan_valley", "2026-10-10", country).kind).toBe("now");
+    }
+    const r = recommendCrops({ crops: SEED_CROPS, today: "2026-11-10", zone: "highland", spaceType: "home_garden", country: null });
+    expect(r.items.find((x) => x.crop.slug === "wheat")!.status).toBe("no_data");
+    expect(r.notices.join(" ")).toContain("لم نتمكن من تأكيد البلد");
+    const plan = generatePlan({ crop: crop("wheat"), plantedOn: "2026-11-10", zone: "highland", spaceType: "farm", country: null });
+    expect(plan.windowFit).toBe("no_data");
   });
+
+  it("finds the country of a saved location, and says «unknown» near borders", () => {
+    const at = (source: "list" | "gps", regionId: string | null, latitude: number, longitude: number) =>
+      countryOfLocation({ source, regionId, latitude, longitude });
+    // A town chosen from the list is certain.
+    expect(at("list", "ps-hebron", 31.53, 35.1)).toBe("PS");
+    expect(at("list", "jo-amman", 31.95, 35.93)).toBe("JO");
+    expect(at("list", null, 31.53, 35.1)).toBeNull();
+    // GPS points clearly inside one country.
+    expect(at("gps", "ps-hebron", 31.53, 35.1)).toBe("PS");
+    expect(at("gps", null, 31.5, 34.47)).toBe("PS"); // غزة
+    expect(at("gps", null, 31.857, 35.46)).toBe("PS"); // أريحا
+    expect(at("gps", null, 31.95, 35.93)).toBe("JO"); // عمّان
+    expect(at("gps", null, 31.88, 35.62)).toBe("JO"); // الشونة الجنوبية، شرق النهر
+    expect(at("gps", null, 33.27, 35.2)).toBe("LB"); // صور
+    // Near a border: no country rather than a guess (the nearest town is still Palestinian).
+    expect(at("gps", "ps-jericho", 31.873, 35.54)).toBeNull(); // جسر الملك حسين
+    expect(at("gps", null, 33.08, 35.4)).toBeNull(); // الحدود اللبنانية
+    expect(at("gps", null, 33.0, 35.75)).toBeNull(); // الجولان
+  });
+
 });

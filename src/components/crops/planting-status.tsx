@@ -38,8 +38,14 @@ export function PlantingStatus({ crop, className, showDetail = true }: { crop: P
       </p>
     );
   }
-  const status = simplePlantingStatus(crop, location.zone, today, countryOfLocation(location));
-  const { title, detail } = describeSimpleStatus(status);
+  const country = countryOfLocation(location);
+  const status = simplePlantingStatus(crop, location.zone, today, country);
+  const described = describeSimpleStatus(status);
+  const title = described.title;
+  const detail =
+    status.kind === "no_data" && country == null && crop.windows.some((w) => w.countryCode)
+      ? "لم نتأكد من البلد لموقعك (قرب الحدود). اختر بلدتك من القائمة في صفحة الموقع لعرض المواعيد الموثّقة."
+      : described.detail;
   const Icon = ICON[status.kind];
   return (
     <div className={cn("flex flex-col items-start gap-1", className)} data-status={status.kind} data-general={status.general || undefined} data-testid="planting-status">

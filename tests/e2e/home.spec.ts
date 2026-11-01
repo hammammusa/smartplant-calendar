@@ -211,4 +211,17 @@ test.describe("expanded crop catalogue", () => {
     await go(page, "/crops/wheat/");
     await expect(page.getByTestId("planting-status")).toHaveAttribute("data-status", "no_data");
   });
+
+  test("a GPS point at the border gets no country, so no Palestinian dates are assumed", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-01-15T09:00:00+02:00"));
+    await seedLocation(page, { source: "gps", latitude: 31.873, longitude: 35.54, label: "قرب جسر الملك حسين", regionId: "ps-jericho", zone: "jordan_valley" });
+    await go(page, "/crops/okra/");
+    const status = page.getByTestId("planting-status");
+    await expect(status).toHaveAttribute("data-status", "no_data");
+    await expect(status).toContainText("لم نتأكد من البلد لموقعك");
+    // The same place chosen from the town list is Palestinian: okra is due in January.
+    await seedLocation(page, { latitude: 31.857, longitude: 35.46, label: "أريحا والأغوار", regionId: "ps-jericho", zone: "jordan_valley" });
+    await page.reload();
+    await expect(status).toHaveAttribute("data-status", "now");
+  });
 });

@@ -11,8 +11,17 @@
  * module (e.g. calling the REST API directly) cannot store invalid or foreign data.
  */
 import { z } from "zod";
-import { findRegion } from "@/data/regions";
+import { findRegion, REGIONS } from "@/data/regions";
+import { countryFromCoordinates } from "@/domain/geo";
 import { windowsForZone } from "@/domain/planting-windows";
+
+/** Country for a plan: from the garden's coordinates (null near borders), else from the chosen town. */
+function planCountry(input: { regionId: string | null; latitude: number | null; longitude: number | null }): string | null {
+  if (input.latitude != null && input.longitude != null) {
+    return countryFromCoordinates({ latitude: input.latitude, longitude: input.longitude }, REGIONS);
+  }
+  return findRegion(input.regionId)?.countryCode ?? null;
+}
 import { generatePlan } from "@/domain/plan-generator";
 import {
   notificationPrefsSchema,
@@ -98,8 +107,8 @@ export async function createPlanAction(raw: unknown): Promise<ActionResult<{ pla
   if (!cropRow) return { ok: false, error: "المحصول المختار غير متوفر." };
   const crop = mapCropRow(cropRow as CropRow);
 
-  const plan = generatePlan({ crop, plantedOn: input.plantedOn, zone: input.zone, spaceType: input.spaceType, country: findRegion(input.regionId)?.countryCode ?? null });
-  const method = windowsForZone(crop, input.zone, findRegion(input.regionId)?.countryCode ?? null)[0]?.method ?? crop.windows[0]?.method ?? null;
+  const plan = generatePlan({ crop, plantedOn: input.plantedOn, zone: input.zone, spaceType: input.spaceType, country: planCountry(input) });
+  const method = windowsForZone(crop, input.zone, planCountry(input))[0]?.method ?? crop.windows[0]?.method ?? null;
 
   if (input.gardenId && !uuidSchema.safeParse(input.gardenId).success) {
     return { ok: false, error: "المساحة الزراعية غير صالحة." };

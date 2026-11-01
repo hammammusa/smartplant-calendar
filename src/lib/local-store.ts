@@ -6,8 +6,17 @@
  * never presents it as an account or cloud save.
  */
 import { generatePlan } from "@/domain/plan-generator";
-import { findRegion } from "@/data/regions";
+import { findRegion, REGIONS } from "@/data/regions";
+import { countryFromCoordinates } from "@/domain/geo";
 import { windowsForZone } from "@/domain/planting-windows";
+
+/** Country for a plan: from the garden's coordinates (null near borders), else from the chosen town. */
+function planCountry(input: { regionId: string | null; latitude: number | null; longitude: number | null }): string | null {
+  if (input.latitude != null && input.longitude != null) {
+    return countryFromCoordinates({ latitude: input.latitude, longitude: input.longitude }, REGIONS);
+  }
+  return findRegion(input.regionId)?.countryCode ?? null;
+}
 import type { PlanRequest, TaskInput, TaskPatch } from "@/domain/schemas";
 import { normalizeLocation, type SavedLocation } from "@/domain/location";
 import type { Crop, Garden, Planting, Task, UserDataSnapshot } from "@/domain/types";
@@ -75,7 +84,7 @@ export function writeLocation(loc: SavedLocation | null) {
 
 export function localCreatePlan(snap: UserDataSnapshot, input: PlanRequest, crop: Crop, now = new Date()) {
   const created = now.toISOString();
-  const plan = generatePlan({ crop, plantedOn: input.plantedOn, zone: input.zone, spaceType: input.spaceType, country: findRegion(input.regionId)?.countryCode ?? null });
+  const plan = generatePlan({ crop, plantedOn: input.plantedOn, zone: input.zone, spaceType: input.spaceType, country: planCountry(input) });
   const existing = input.gardenId ? snap.gardens.find((g) => g.id === input.gardenId) : undefined;
   const garden: Garden = existing ?? {
     id: newId(),
@@ -95,7 +104,7 @@ export function localCreatePlan(snap: UserDataSnapshot, input: PlanRequest, crop
     cropSlug: crop.slug,
     cropName: crop.name,
     plantedOn: input.plantedOn,
-    method: windowsForZone(crop, input.zone, findRegion(input.regionId)?.countryCode ?? null)[0]?.method ?? crop.windows[0]?.method ?? null,
+    method: windowsForZone(crop, input.zone, planCountry(input))[0]?.method ?? crop.windows[0]?.method ?? null,
     areaM2: input.areaM2,
     quantity: input.quantity,
     status: "active",

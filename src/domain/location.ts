@@ -2,8 +2,8 @@
  * The user's confirmed farm location (v2). Stored locally (guest) or on the
  * user's own profile row (signed in). Pure helpers, unit-tested.
  */
-import { findRegion, nearestRegion } from "@/data/regions";
-import { roundForService, type LatLon } from "./geo";
+import { findRegion, nearestRegion, REGIONS } from "@/data/regions";
+import { countryFromCoordinates, roundForService, type LatLon } from "./geo";
 import { CLIMATE_ZONES, type ClimateZone } from "./types";
 
 export type LocationSource = "gps" | "map" | "search" | "list";
@@ -95,8 +95,14 @@ export function normalizeLocation(raw: unknown): SavedLocation | null {
   };
 }
 
-/** ISO country of a saved location (from its region, else the nearest listed town). */
-export function countryOfLocation(loc: Pick<SavedLocation, "regionId" | "latitude" | "longitude"> | null): string | null {
+/**
+ * ISO country of a saved location, or null when it cannot be established.
+ * A town chosen from the list gives its country; a GPS/map/search point is
+ * classified by `countryFromCoordinates`, which returns null near borders
+ * instead of guessing.
+ */
+export function countryOfLocation(loc: Pick<SavedLocation, "source" | "regionId" | "latitude" | "longitude"> | null): string | null {
   if (!loc) return null;
-  return findRegion(loc.regionId)?.countryCode ?? nearestRegion(loc.latitude, loc.longitude).countryCode;
+  if (loc.source === "list") return findRegion(loc.regionId)?.countryCode ?? null;
+  return countryFromCoordinates(loc, REGIONS);
 }

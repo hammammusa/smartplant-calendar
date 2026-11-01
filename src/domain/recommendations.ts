@@ -236,6 +236,9 @@ export function recommendCrops(input: RecommendationInput): RecommendationResult
   >;
   const notices: string[] = [];
   if (SPACES_WITHOUT_RULES.includes(input.spaceType)) notices.push(GREENHOUSE_NOTICE);
+  if (input.country == null && input.crops.some((c) => c.windows.some((w) => w.countryCode))) {
+    notices.push("لم نتمكن من تأكيد البلد لموقعك (قد يكون قريبًا من الحدود)، لذلك لا نعرض المواعيد الموثّقة لبلد بعينه. اختر بلدتك من القائمة في صفحة الموقع لعرضها.");
+  }
   return { items, groups, notices };
 }
 

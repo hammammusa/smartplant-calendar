@@ -15,9 +15,14 @@ export function monthDistance(a: number, b: number): number {
   return Math.min(d, 12 - d);
 }
 
-/** A window documented for one country applies only there (unknown country = no restriction). */
+/**
+ * A window documented for one country applies only to locations confirmed to
+ * be in that country. When the country is unknown (null/undefined), only the
+ * unscoped general data applies: Palestinian dates are never assumed for a
+ * location whose country we could not establish.
+ */
 export function windowAppliesToCountry(w: PlantingWindow, country?: string | null): boolean {
-  return !w.countryCode || !country || w.countryCode === country;
+  return !w.countryCode || (country != null && w.countryCode === country);
 }
 
 /**
@@ -54,7 +59,11 @@ export function evaluateWindowFit(crop: Pick<Crop, "windows">, zone: ClimateZone
 /** Crops that have at least one window in the given season (any zone, or a given zone). */
 export function cropMatchesSeason(crop: Pick<Crop, "windows">, season: Season, zone?: ClimateZone): boolean {
   const months = SEASON_MONTHS[season];
-  return (zone ? windowsForZone(crop, zone) : crop.windows).some((w) => months.some((m) => monthInWindow(m, w.startMonth, w.endMonth)));
+  // Catalogue filter (describes the data, not a recommendation for a location):
+  // a zone filter matches the zone's own windows and general country-wide ones.
+  return crop.windows
+    .filter((w) => !zone || w.zone === zone || w.zone === null)
+    .some((w) => months.some((m) => monthInWindow(m, w.startMonth, w.endMonth)));
 }
 
 export function cropPlantableInMonth(crop: Pick<Crop, "windows">, month: number, zone: ClimateZone, country?: string | null): boolean {
