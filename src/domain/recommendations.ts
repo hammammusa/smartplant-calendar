@@ -18,8 +18,8 @@
  */
 import { addMonths, daysInMonth, diffDays, parseISODate, toISODate } from "@/lib/dates";
 import { formatDays, formatMonthRange, monthName } from "@/lib/format";
-import { CLIMATE_ZONE_LABELS, GREENHOUSE_NOTICE, METHOD_LABELS, SPACES_WITHOUT_RULES, SPACE_TYPE_LABELS } from "./labels";
-import { monthInWindow } from "./planting-windows";
+import { CLIMATE_ZONE_LABELS, COUNTRY_LABELS, GREENHOUSE_NOTICE, METHOD_LABELS, SPACES_WITHOUT_RULES, SPACE_TYPE_LABELS } from "./labels";
+import { isGeneralOnly, monthInWindow, windowsForZone } from "./planting-windows";
 import type { ClimateZone, Crop, ISODate, PlantingMethod, PlantingWindow, SpaceType } from "./types";
 import type { WeatherAlert } from "./weather";
 
@@ -58,6 +58,8 @@ export interface Recommendation {
   nextWindowStart: ISODate | null;
   daysUntilNextWindow: number | null;
   spaceSuitable: boolean;
+  /** Based only on general country-wide dates (not verified for the zone). */
+  general: boolean;
   reasons: string[];
   warnings: string[];
 }
@@ -70,6 +72,8 @@ export interface RecommendationInput {
   methodGroup?: MethodGroup;
   /** Forecast alerts for the next days (empty when weather is unavailable). */
   alerts?: WeatherAlert[];
+  /** ISO country of the location: windows documented for another country are ignored. */
+  country?: string | null;
 }
 
 /** Last calendar day of the window that contains `today`. */
@@ -100,7 +104,10 @@ export function recommendCrop(crop: Crop, input: RecommendationInput): Recommend
   const group = input.methodGroup ?? "all";
   const month = parseISODate(today).month;
   const zoneLabel = CLIMATE_ZONE_LABELS[zone];
-  const windows = crop.windows.filter((w) => w.zone === zone && methodAllowed(w.method, group));
+  const windows = windowsForZone(crop, zone, input.country).filter((w) => methodAllowed(w.method, group));
+  const general = isGeneralOnly(windows);
+  const countryName = COUNTRY_LABELS[windows[0]?.countryCode ?? ""] ?? "المنطقة";
+  const where = general ? `عمومًا في ${countryName} (موعد عام غير خاص بمنطقتك)` : `لمنطقتك (${zoneLabel})`;
   const noRulesSpace = SPACES_WITHOUT_RULES.includes(spaceType);
   // An empty list means "not documented yet", not "unsuitable everywhere".
   const spaceUnknown = crop.spaceTypes.length === 0;
@@ -112,6 +119,7 @@ export function recommendCrop(crop: Crop, input: RecommendationInput): Recommend
     crop,
     windows,
     spaceSuitable,
+    general,
     reasons,
     warnings,
   };
@@ -137,8 +145,11 @@ export function recommendCrop(crop: Crop, input: RecommendationInput): Recommend
     const end = windowEndDate(today, current);
     const daysLeft = diffDays(today, end);
     reasons.unshift(
-      `شهر ${monthName(month)} ضمن موعد ${METHOD_LABELS[current.method]} المسجل لمنطقتك (${zoneLabel}): ${formatMonthRange(current.startMonth, current.endMonth)}${current.note ? ` — ${current.note}` : ""}.`,
+      `شهر ${monthName(month)} ضمن موعد ${METHOD_LABELS[current.method]} المسجل ${where}: ${formatMonthRange(current.startMonth, current.endMonth)}${current.note ? ` — ${current.note}` : ""}.`,
     );
+    if (general) {
+      warnings.push(`هذا موعد عام في ${countryName} وليس خاصًا بمنطقتك المناخية أو قريتك؛ تأكد من الإرشاد الزراعي المحلي ومن الأمطار قبل الزراعة.`);
+    }
     if (daysLeft <= 14) reasons.push(`يتبقى ${formatDays(daysLeft)} على نهاية هذه الفترة.`);
 
     const frost = (input.alerts ?? []).filter((a) => a.kind === "frost");
@@ -171,8 +182,8 @@ export function recommendCrop(crop: Crop, input: RecommendationInput): Recommend
   const status: RecommendationStatus = days <= SOON_DAYS ? "soon" : "later";
   reasons.unshift(
     status === "soon"
-      ? `يبدأ موعد ${METHOD_LABELS[upcoming.w.method]} في منطقتك بعد ${formatDays(days)} (${formatMonthRange(upcoming.w.startMonth, upcoming.w.endMonth)}).`
-      : `خارج موعده حاليًا؛ أقرب فترة مسجلة لمنطقتك تبدأ في ${monthName(upcoming.w.startMonth)} (${formatMonthRange(upcoming.w.startMonth, upcoming.w.endMonth)}).`,
+      ? `يبدأ موعد ${METHOD_LABELS[upcoming.w.method]} المسجل ${where} بعد ${formatDays(days)} (${formatMonthRange(upcoming.w.startMonth, upcoming.w.endMonth)}).`
+      : `خارج موعده حاليًا؛ أقرب فترة مسجلة ${where} تبدأ في ${monthName(upcoming.w.startMonth)} (${formatMonthRange(upcoming.w.startMonth, upcoming.w.endMonth)}).`,
   );
   if (status === "soon") reasons.push("وقت مناسب لتجهيز التربة أو البذور أو الأشتال.");
   return {
@@ -197,6 +208,8 @@ export function recommendCrop(crop: Crop, input: RecommendationInput): Recommend
 export function compareRecommendations(a: Recommendation, b: Recommendation): number {
   const s = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
   if (s !== 0) return s;
+  // Zone-specific dates before general country-wide ones.
+  if (a.general !== b.general) return a.general ? 1 : -1;
   if (a.status === "now" || a.status === "protect") {
     if (a.spaceSuitable !== b.spaceSuitable) return a.spaceSuitable ? -1 : 1;
     const d = (a.daysLeftInWindow ?? 0) - (b.daysLeftInWindow ?? 0);

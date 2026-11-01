@@ -113,7 +113,19 @@ export const GUIDE_SECTIONS = [
 export type GuideSection = (typeof GUIDE_SECTIONS)[number];
 
 export interface PlantingWindow {
-  zone: ClimateZone;
+  /**
+   * Climate zone the window was documented for. null = a general date for the
+   * whole country (`countryCode`), not verified for any particular zone: it is
+   * used only when the crop has no window for the visitor's zone, and the UI
+   * labels it as general.
+   */
+  zone: ClimateZone | null;
+  /**
+   * ISO country the source covers (e.g. "PS"). Empty = general Levant guidance
+   * (the original preliminary data). A scoped window is never shown as
+   * documented for a location in another country.
+   */
+  countryCode?: string;
   /** 1–12. A window may wrap the year end (e.g. 10 → 2). */
   startMonth: number;
   endMonth: number;

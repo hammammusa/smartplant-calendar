@@ -7,7 +7,7 @@
 import { addDays, monthOf } from "@/lib/dates";
 import { formatShortDate } from "@/lib/format";
 import { CONTAINER_SPACES, GREENHOUSE_NOTICE, SPACES_WITHOUT_RULES, SPACE_TYPE_LABELS } from "./labels";
-import { evaluateWindowFit, windowsForZone, type WindowFit } from "./planting-windows";
+import { evaluateWindowFit, isGeneralOnly, windowsForZone, type WindowFit } from "./planting-windows";
 import type { ClimateZone, Crop, ISODate, PlantingMethod, SpaceType, TaskTemplate, TaskType } from "./types";
 
 export interface PlanInput {
@@ -15,6 +15,8 @@ export interface PlanInput {
   plantedOn: ISODate;
   zone: ClimateZone;
   spaceType: SpaceType;
+  /** ISO country of the garden; windows scoped to another country are ignored. */
+  country?: string | null;
 }
 
 export interface GeneratedTask {
@@ -61,8 +63,8 @@ const PLANT_TITLE: Record<PlantingMethod, (name: string) => string> = {
  * crop-specific task rules yet. They contain nothing crop-specific beyond the
  * planting method of the zone: no fertiliser doses, no harvest date.
  */
-export function genericTemplates(crop: Pick<Crop, "name" | "windows">, zone: ClimateZone): TaskTemplate[] {
-  const method = windowsForZone(crop, zone)[0]?.method ?? crop.windows[0]?.method ?? "direct_sowing";
+export function genericTemplates(crop: Pick<Crop, "name" | "windows">, zone: ClimateZone, country?: string | null): TaskTemplate[] {
+  const method = windowsForZone(crop, zone, country)[0]?.method ?? crop.windows[0]?.method ?? "direct_sowing";
   return [
     {
       key: "generic-soil",
@@ -85,7 +87,8 @@ export function genericTemplates(crop: Pick<Crop, "name" | "windows">, zone: Cli
       repeatEveryDays: 3,
       untilOffsetDays: 60,
       title: `متابعة رطوبة التربة لـ${crop.name}`,
-      description: "افحص رطوبة التربة بإصبعك على عمق 3–5 سم، واروِ عند جفافها فقط. تجاوز المهمة إن هطلت أمطار كافية.",
+      description:
+        "إن كانت زراعتك مروية: افحص رطوبة التربة بإصبعك على عمق 3–5 سم، واروِ عند جفافها فقط. في الزراعة البعلية تعتمد على المطر، فتجاوز المهمة. تجاوزها أيضًا إن هطلت أمطار كافية.",
     },
     {
       key: "generic-pests",
@@ -106,7 +109,7 @@ export function generatePlan(input: PlanInput): GeneratedPlan {
   const containerSpace = CONTAINER_SPACES.includes(spaceType);
 
   const generic = crop.templates.length === 0;
-  const templates = generic ? genericTemplates(crop, zone) : crop.templates;
+  const templates = generic ? genericTemplates(crop, zone, input.country) : crop.templates;
   if (generic) {
     warnings.push("لا تتوفر بعد قواعد مهام خاصة بهذا المحصول، لذلك تتضمن الخطة مهام عامة فقط: تجهيز التربة والزراعة ومتابعة الرطوبة والتفقد.");
   }
@@ -159,7 +162,10 @@ export function generatePlan(input: PlanInput): GeneratedPlan {
     );
   }
 
-  const windowFit = evaluateWindowFit(crop, zone, monthOf(plantedOn));
+  const windowFit = evaluateWindowFit(crop, zone, monthOf(plantedOn), input.country);
+  if (isGeneralOnly(windowsForZone(crop, zone, input.country))) {
+    warnings.push("مواعيد هذا المحصول عامة على مستوى البلد وليست خاصة بمنطقتك المناخية؛ تأكد من الإرشاد الزراعي المحلي.");
+  }
   if (windowFit === "outside_window") {
     warnings.push(
       "تاريخ الزراعة المختار يقع خارج المواعيد الأولية المقترحة لمنطقتك المناخية. قد يتأثر النبات بالحرارة أو البرودة؛ راجع المواعيد المقترحة أو استشر مرشدًا زراعيًا محليًا.",

@@ -178,7 +178,9 @@ export const adminCropSchema = z
 export type AdminCropInput = z.infer<typeof adminCropSchema>;
 
 export const adminWindowSchema = z.object({
-  zone: z.enum(CLIMATE_ZONES),
+  /** null = general date for the whole country (not zone-specific). */
+  zone: z.enum(CLIMATE_ZONES).nullable(),
+  countryCode: z.union([z.string().regex(/^[A-Z]{2}$/), z.literal("")]).optional().default(""),
   startMonth: month,
   endMonth: month,
   method: z.enum(PLANTING_METHODS),

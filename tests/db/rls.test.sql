@@ -12,6 +12,13 @@ begin
   if (select count(*) from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.slug = 'okra' and w.source_id = 'moa-ps-okra') <> 3 then
     raise exception 'okra sourced windows missing or duplicated';
   end if;
+  if (select count(*) from public.crop_planting_windows w join public.crops c on c.id = w.crop_id
+      where c.slug = 'wheat' and w.zone is null and w.country_code = 'PS' and w.source_id = 'wafa-field-crops') <> 2 then
+    raise exception 'wheat general Palestinian windows missing';
+  end if;
+  if exists (select 1 from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.slug = 'tomato' and w.country_code is not null) then
+    raise exception 'existing general windows must stay unscoped';
+  end if;
   if (select data_status from public.crops where slug = 'eggplant') <> 'incomplete' then raise exception 'eggplant should stay incomplete'; end if;
   if exists (select 1 from public.crop_planting_windows w join public.crops c on c.id = w.crop_id where c.data_status = 'incomplete') then
     raise exception 'incomplete crops must not have windows';

@@ -3,6 +3,7 @@
 import { CalendarCheck2, CalendarClock, CircleHelp, MapPin, MoonStar } from "lucide-react";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { countryOfLocation } from "@/domain/location";
 import { describeSimpleStatus, simplePlantingStatus, type SimpleStatusKind } from "@/domain/planting-windows";
 import type { Crop } from "@/domain/types";
 import { cn } from "@/lib/utils";
@@ -37,12 +38,12 @@ export function PlantingStatus({ crop, className, showDetail = true }: { crop: P
       </p>
     );
   }
-  const status = simplePlantingStatus(crop, location.zone, today);
+  const status = simplePlantingStatus(crop, location.zone, today, countryOfLocation(location));
   const { title, detail } = describeSimpleStatus(status);
   const Icon = ICON[status.kind];
   return (
-    <div className={cn("flex flex-col items-start gap-1", className)} data-status={status.kind} data-testid="planting-status">
-      <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-bold", TONE[status.kind])}>
+    <div className={cn("flex flex-col items-start gap-1", className)} data-status={status.kind} data-general={status.general || undefined} data-testid="planting-status">
+      <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-bold", status.general && status.kind === "now" ? "bg-warning-soft text-warning" : TONE[status.kind])}>
         <Icon className="size-4 shrink-0" aria-hidden />
         {title}
       </span>

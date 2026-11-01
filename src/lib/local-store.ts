@@ -6,6 +6,8 @@
  * never presents it as an account or cloud save.
  */
 import { generatePlan } from "@/domain/plan-generator";
+import { findRegion } from "@/data/regions";
+import { windowsForZone } from "@/domain/planting-windows";
 import type { PlanRequest, TaskInput, TaskPatch } from "@/domain/schemas";
 import { normalizeLocation, type SavedLocation } from "@/domain/location";
 import type { Crop, Garden, Planting, Task, UserDataSnapshot } from "@/domain/types";
@@ -73,7 +75,7 @@ export function writeLocation(loc: SavedLocation | null) {
 
 export function localCreatePlan(snap: UserDataSnapshot, input: PlanRequest, crop: Crop, now = new Date()) {
   const created = now.toISOString();
-  const plan = generatePlan({ crop, plantedOn: input.plantedOn, zone: input.zone, spaceType: input.spaceType });
+  const plan = generatePlan({ crop, plantedOn: input.plantedOn, zone: input.zone, spaceType: input.spaceType, country: findRegion(input.regionId)?.countryCode ?? null });
   const existing = input.gardenId ? snap.gardens.find((g) => g.id === input.gardenId) : undefined;
   const garden: Garden = existing ?? {
     id: newId(),
@@ -93,7 +95,7 @@ export function localCreatePlan(snap: UserDataSnapshot, input: PlanRequest, crop
     cropSlug: crop.slug,
     cropName: crop.name,
     plantedOn: input.plantedOn,
-    method: crop.windows.find((w) => w.zone === input.zone)?.method ?? crop.windows[0]?.method ?? null,
+    method: windowsForZone(crop, input.zone, findRegion(input.regionId)?.countryCode ?? null)[0]?.method ?? crop.windows[0]?.method ?? null,
     areaM2: input.areaM2,
     quantity: input.quantity,
     status: "active",

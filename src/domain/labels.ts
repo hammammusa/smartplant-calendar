@@ -23,6 +23,14 @@ export const CLIMATE_ZONE_LABELS: Record<ClimateZone, string> = {
   arid: "صحراوي / شبه جاف",
 };
 
+/** Countries a planting source can be scoped to. */
+export const COUNTRY_LABELS: Record<string, string> = {
+  PS: "فلسطين",
+  JO: "الأردن",
+  LB: "لبنان",
+  SY: "سوريا",
+};
+
 export const CLIMATE_ZONE_DESCRIPTIONS: Record<ClimateZone, string> = {
   coastal: "شتاء معتدل نادر الصقيع وصيف رطب، مثل غزة ويافا وحيفا وبيروت.",
   highland: "شتاء بارد قد يشهد صقيعًا وثلوجًا أحيانًا وصيف معتدل، مثل الخليل والقدس ونابلس وعمّان.",

@@ -117,6 +117,7 @@ export async function saveCropRulesAction(cropId: string, raw: unknown): Promise
       v.windows.map((w, i) => ({
         crop_id: cropId,
         zone: w.zone,
+        country_code: w.countryCode || null,
         start_month: w.startMonth,
         end_month: w.endMonth,
         method: w.method,

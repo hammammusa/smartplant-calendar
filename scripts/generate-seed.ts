@@ -55,10 +55,10 @@ for (const c of SEED_CROPS) {
   // re-adds windows an admin changed or removed.
   if (c.windows.length) {
     const values = c.windows
-      .map((w, i) => `(${q(w.zone)}, ${w.startMonth}, ${w.endMonth}, ${q(w.method)}, ${q(w.note)}, ${q(w.sourceId)}, ${q(w.sourceDetail)}, ${i})`)
+      .map((w, i) => `(${q(w.zone)}, ${q(w.countryCode)}, ${w.startMonth}, ${w.endMonth}, ${q(w.method)}, ${q(w.note)}, ${q(w.sourceId)}, ${q(w.sourceDetail)}, ${i})`)
       .join(", ");
     lines.push(
-      `insert into public.crop_planting_windows (crop_id, zone, start_month, end_month, method, note, source_id, source_detail, sort_order) select ${crop}, v.zone, v.start_month, v.end_month, v.method, v.note, v.source_id, v.source_detail, v.sort_order from (values ${values}) as v(zone, start_month, end_month, method, note, source_id, source_detail, sort_order) where not exists (select 1 from public.crop_planting_windows x where x.crop_id = ${crop}) and (select updated_by from public.crops where slug = ${q(c.slug)}) is null;`,
+      `insert into public.crop_planting_windows (crop_id, zone, country_code, start_month, end_month, method, note, source_id, source_detail, sort_order) select ${crop}, v.zone, v.country_code, v.start_month, v.end_month, v.method, v.note, v.source_id, v.source_detail, v.sort_order from (values ${values}) as v(zone, country_code, start_month, end_month, method, note, source_id, source_detail, sort_order) where not exists (select 1 from public.crop_planting_windows x where x.crop_id = ${crop}) and (select updated_by from public.crops where slug = ${q(c.slug)}) is null;`,
     );
   }
   c.templates.forEach((t, i) => {

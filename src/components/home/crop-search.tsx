@@ -8,6 +8,7 @@ import { CropImage } from "@/components/brand/crop-image";
 import { useAppData } from "@/components/providers/app-data-provider";
 import { ambiguityFor } from "@/domain/ambiguous-names";
 import { buildCropIndex, normalizeArabic, searchCropIndex } from "@/domain/crop-search";
+import { countryOfLocation } from "@/domain/location";
 import { describeSimpleStatus, simplePlantingStatus, windowsForZone, type SimpleStatusKind } from "@/domain/planting-windows";
 import type { ClimateZone, Crop } from "@/domain/types";
 import { formatMonthRange } from "@/lib/format";
@@ -19,8 +20,8 @@ export type SearchCrop = Pick<Crop, "slug" | "name" | "otherNames" | "scientific
 const MAX_RESULTS = 6;
 
 /** Distinct month ranges of a crop's windows for one zone, e.g. "آذار – أيار، أيلول – تشرين الأول". */
-function windowText(crop: SearchCrop, zone: ClimateZone): string | null {
-  const ranges = [...new Set(windowsForZone(crop, zone).map((w) => formatMonthRange(w.startMonth, w.endMonth)))];
+function windowText(crop: SearchCrop, zone: ClimateZone, country: string | null): string | null {
+  const ranges = [...new Set(windowsForZone(crop, zone, country).map((w) => formatMonthRange(w.startMonth, w.endMonth)))];
   return ranges.length ? ranges.join("، ") : null;
 }
 
@@ -57,6 +58,7 @@ export function CropSearch({ crops, ref }: { crops: SearchCrop[]; ref?: React.Re
   const results = useMemo(() => (deferred.trim() ? searchCropIndex(index, deferred, MAX_RESULTS) : []), [index, deferred]);
   const showList = open && query.trim().length > 0;
   const zone = mode !== "loading" ? location?.zone ?? null : null;
+  const country = countryOfLocation(location);
 
   const goTo = (slug: string) => {
     setOpen(false);
@@ -171,8 +173,8 @@ export function CropSearch({ crops, ref }: { crops: SearchCrop[]; ref?: React.Re
           <ul id={listId} role="listbox" aria-label="نتائج البحث" className="max-h-[min(60vh,26rem)] overflow-y-auto p-1.5">
             {results.map((crop, i) => {
               const hint = ambiguous?.options.find((o) => o.slug === crop.slug)?.hint;
-              const months = zone ? windowText(crop, zone) : null;
-              const status = zone ? simplePlantingStatus(crop, zone, today) : null;
+              const months = zone ? windowText(crop, zone, country) : null;
+              const status = zone ? simplePlantingStatus(crop, zone, today, country) : null;
               const alias = matchedAlias(crop, deferred);
               return (
                 <li
@@ -197,7 +199,7 @@ export function CropSearch({ crops, ref }: { crops: SearchCrop[]; ref?: React.Re
                     {hint ? <p className="text-sm font-semibold text-foreground">{hint}</p> : null}
                     {status ? (
                       <>
-                        <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-bold", STATUS_TONE[status.kind])}>
+                        <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-bold", status.general && status.kind === "now" ? "bg-warning-soft text-warning" : STATUS_TONE[status.kind])}>
                           {describeSimpleStatus(status).title}
                         </span>
                         {months ? <p className="text-sm text-muted-foreground">يُزرع: {months}</p> : null}

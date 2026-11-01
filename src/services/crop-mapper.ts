@@ -27,6 +27,7 @@ export interface CropRow {
   is_published?: boolean;
   crop_planting_windows?: {
     zone: PlantingWindow["zone"];
+    country_code?: string | null;
     start_month: number;
     end_month: number;
     method: PlantingWindow["method"];
@@ -79,7 +80,8 @@ export function mapCropRow(row: CropRow): Crop {
     dataStatus: row.data_status,
     sourceNote: row.source_note ?? "",
     windows: [...(row.crop_planting_windows ?? [])].sort(bySort).map((w) => ({
-      zone: w.zone,
+      zone: w.zone ?? null,
+      countryCode: w.country_code ?? undefined,
       startMonth: w.start_month,
       endMonth: w.end_month,
       method: w.method,

@@ -93,7 +93,7 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
   const rules = useForm<RulesForm, unknown, z.output<typeof adminCropRulesSchema>>({
     resolver: zodResolver(adminCropRulesSchema),
     defaultValues: {
-      windows: crop?.windows.map((w) => ({ ...w, note: w.note ?? "", sourceId: w.sourceId ?? "", sourceDetail: w.sourceDetail ?? "" })) ?? [],
+      windows: crop?.windows.map((w) => ({ ...w, note: w.note ?? "", countryCode: w.countryCode ?? "", sourceId: w.sourceId ?? "", sourceDetail: w.sourceDetail ?? "" })) ?? [],
       templates:
         crop?.templates.map((t) => ({
           key: t.key,
@@ -312,7 +312,8 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
             <CardContent className="flex flex-col gap-3">
               {windows.fields.map((f, i) => (
                 <div key={f.id} className="grid grid-cols-2 gap-2 rounded-xl border border-border p-3 md:grid-cols-[1fr_1fr_1fr_1fr_1.5fr_auto]">
-                  <Select aria-label="المنطقة" {...rules.register(`windows.${i}.zone`)}>
+                  <Select aria-label="المنطقة" {...rules.register(`windows.${i}.zone`, { setValueAs: (v) => v || null })}>
+                    <option value="">عام للبلد كله (غير خاص بمنطقة)</option>
                     {CLIMATE_ZONES.map((z) => <option key={z} value={z}>{CLIMATE_ZONE_LABELS[z]}</option>)}
                   </Select>
                   <Select aria-label="من شهر" {...rules.register(`windows.${i}.startMonth`, { valueAsNumber: true })}>
@@ -328,7 +329,7 @@ export function CropEditor({ crop, cropId, published }: { crop: Crop | null; cro
                   <Button variant="danger-ghost" size="icon" aria-label="حذف الموعد" onClick={() => windows.remove(i)}><Trash2 /></Button>
                 </div>
               ))}
-              <Button variant="outline" className="self-start" onClick={() => windows.append({ zone: "highland", startMonth: 3, endMonth: 4, method: "transplanting", note: "", sourceId: "", sourceDetail: "" })}>
+              <Button variant="outline" className="self-start" onClick={() => windows.append({ zone: "highland", countryCode: "", startMonth: 3, endMonth: 4, method: "transplanting", note: "", sourceId: "", sourceDetail: "" })}>
                 <Plus /> إضافة موعد
               </Button>
             </CardContent>

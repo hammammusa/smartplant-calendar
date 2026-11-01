@@ -6,7 +6,8 @@ import { generatePlan } from "@/domain/plan-generator";
 import { SEED_CROPS } from "@/data/crops";
 import { filterCrops } from "@/domain/crop-filter";
 import { buildCropIndex, editDistance, isPlannable, normalizeArabic, searchCropIndex } from "@/domain/crop-search";
-import { describeSimpleStatus, simplePlantingStatus } from "@/domain/planting-windows";
+import { describeSimpleStatus, simplePlantingStatus, windowsForZone } from "@/domain/planting-windows";
+import { countryOfLocation } from "@/domain/location";
 import { recommendCrops } from "@/domain/recommendations";
 import { CROP_CATEGORIES, PLANTING_METHODS } from "@/domain/types";
 
@@ -208,5 +209,92 @@ describe("simple planting status in Hebron, Gaza and Jericho", () => {
       expect(now).not.toContain("incomplete");
       expect(r.groups.no_data.some((x) => x.crop.slug === "eggplant")).toBe(true);
     }
+  });
+});
+
+describe("general Palestinian dates (wafa.ps) and country scope", () => {
+  it("records field-crop dates as general for Palestine, with the text/table difference kept", () => {
+    const wheat = crop("wheat");
+    expect(wheat.dataStatus).toBe("preliminary");
+    expect(wheat.windows).toHaveLength(2);
+    expect(wheat.windows.every((w) => w.zone === null && w.countryCode === "PS" && w.sourceId === "wafa-field-crops")).toBe(true);
+    expect(wheat.windows.map((w) => [w.startMonth, w.endMonth])).toEqual([[10, 11], [11, 12]]);
+    expect(wheat.windows[0].sourceDetail).toContain("النص الشارح");
+    expect(wheat.windows[1].sourceDetail).toContain("الجدول");
+    expect(crop("chickpea").windows.map((w) => [w.startMonth, w.endMonth])).toEqual([[12, 1]]);
+    expect(crop("sorghum").windows.map((w) => [w.startMonth, w.endMonth])).toEqual([[4, 4]]);
+    for (const slug of ["lentil", "vetch", "bitter-vetch"]) expect(crop(slug).windows.map((w) => w.startMonth)).toEqual([12]);
+  });
+
+  it("paraphrases are labelled and never presented as verbatim quotes", () => {
+    for (const c of SEED_CROPS) for (const w of c.windows) {
+      if (!w.sourceDetail) continue;
+      expect(w.sourceDetail).toContain("بتصرّف");
+      expect(w.sourceDetail).not.toMatch(/[«»"]/);
+    }
+  });
+
+  it("general dates are a soft answer, never «مناسب للزراعة الآن»", () => {
+    const s = simplePlantingStatus(crop("wheat"), "highland", "2026-11-10", "PS"); // الخليل
+    expect(s.kind).toBe("now");
+    expect(s.general).toBe(true);
+    const text = describeSimpleStatus(s);
+    expect(text.title).not.toBe("مناسب للزراعة الآن");
+    expect(text.title).toBe("ضمن الموعد العام للزراعة");
+    expect(text.detail).toContain("موعد عام غير خاص بمنطقتك");
+    // Gaza (coast) and Jericho get the same general answer, flagged as general.
+    expect(simplePlantingStatus(crop("chickpea"), "coastal", "2026-01-10", "PS")).toMatchObject({ kind: "now", general: true });
+    expect(simplePlantingStatus(crop("chickpea"), "jordan_valley", "2026-02-10", "PS").kind).toBe("later");
+    expect(simplePlantingStatus(crop("sorghum"), "jordan_valley", "2026-03-20", "PS")).toMatchObject({ kind: "soon", month: 4, general: true });
+  });
+
+  it("Palestinian dates are not shown as documented in Jordan, Lebanon or Syria", () => {
+    for (const country of ["JO", "LB", "SY"]) {
+      expect(simplePlantingStatus(crop("wheat"), "highland", "2026-11-10", country).kind).toBe("no_data");
+      expect(simplePlantingStatus(crop("okra"), "jordan_valley", "2026-01-15", country).kind).toBe("no_data");
+    }
+    // The original general Levant data (no country) still applies everywhere.
+    expect(simplePlantingStatus(crop("tomato"), "jordan_valley", "2026-10-10", "JO").kind).toBe("now");
+  });
+
+  it("zone-specific windows win over general ones", () => {
+    const mixed = {
+      windows: [
+        { zone: "highland" as const, countryCode: "PS", startMonth: 3, endMonth: 3, method: "direct_sowing" as const },
+        { zone: null, countryCode: "PS", startMonth: 5, endMonth: 6, method: "direct_sowing" as const },
+      ],
+    };
+    expect(windowsForZone(mixed, "highland", "PS").map((w) => w.startMonth)).toEqual([3]);
+    expect(windowsForZone(mixed, "coastal", "PS").map((w) => w.startMonth)).toEqual([5]);
+  });
+
+  it("recommendations flag general dates and rank zone-specific ones first", () => {
+    const r = recommendCrops({ crops: SEED_CROPS, today: "2026-11-10", zone: "highland", spaceType: "home_garden", country: "PS" });
+    const wheat = r.items.find((x) => x.crop.slug === "wheat")!;
+    expect(wheat.status).toBe("now");
+    expect(wheat.general).toBe(true);
+    expect(wheat.warnings.join(" ")).toContain("موعد عام في فلسطين");
+    const now = r.groups.now;
+    const firstGeneral = now.findIndex((x) => x.general);
+    expect(firstGeneral === -1 || now.slice(firstGeneral).every((x) => x.general)).toBe(true);
+    const jo = recommendCrops({ crops: SEED_CROPS, today: "2026-11-10", zone: "highland", spaceType: "home_garden", country: "JO" });
+    expect(jo.items.find((x) => x.crop.slug === "wheat")!.status).toBe("no_data");
+  });
+
+  it("plans for general dates warn and do not assume irrigation", () => {
+    const plan = generatePlan({ crop: crop("wheat"), plantedOn: "2026-11-10", zone: "highland", spaceType: "farm", country: "PS" });
+    expect(plan.windowFit).toBe("in_window");
+    expect(plan.expectedHarvestStart).toBeNull();
+    expect(plan.warnings.join(" ")).toContain("عامة على مستوى البلد");
+    expect(plan.tasks.find((t) => t.type === "irrigation")?.description).toContain("الزراعة البعلية");
+    const jo = generatePlan({ crop: crop("wheat"), plantedOn: "2026-11-10", zone: "highland", spaceType: "farm", country: "JO" });
+    expect(jo.windowFit).toBe("no_data");
+  });
+
+  it("finds the country of a saved location", () => {
+    expect(countryOfLocation({ regionId: "ps-hebron", latitude: 31.53, longitude: 35.1 })).toBe("PS");
+    expect(countryOfLocation({ regionId: "jo-amman", latitude: 31.95, longitude: 35.93 })).toBe("JO");
+    expect(countryOfLocation({ regionId: null, latitude: 31.95, longitude: 35.93 })).toBe("JO");
+    expect(countryOfLocation({ regionId: null, latitude: 31.53, longitude: 35.1 })).toBe("PS");
   });
 });

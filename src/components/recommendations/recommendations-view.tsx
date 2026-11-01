@@ -21,6 +21,7 @@ import {
   type Recommendation,
   type RecommendationStatus,
 } from "@/domain/recommendations";
+import { countryOfLocation } from "@/domain/location";
 import { SPACE_TYPES, type Crop, type SpaceType } from "@/domain/types";
 import { isValidISODate } from "@/lib/dates";
 import { formatDate, formatMonthRange, formatNumber } from "@/lib/format";
@@ -69,12 +70,17 @@ export function RecommendationCard({ r, space }: { r: Recommendation; space: Spa
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-bold">{r.crop.name}</h3>
-            <Badge variant={meta.variant}>{meta.badge}</Badge>
+            {r.general && r.status === "now" ? (
+              <Badge variant="warning">ضمن الموعد العام</Badge>
+            ) : (
+              <Badge variant={meta.variant}>{meta.badge}</Badge>
+            )}
+            {r.general ? <Badge variant="outline">موعد عام لا يخص منطقتك</Badge> : null}
           </div>
           {r.method ? <p className="text-sm text-muted-foreground">الطريقة المقترحة: {METHOD_LABELS[r.method]}</p> : null}
           {r.windows.length ? (
             <p className="text-sm">
-              <span className="text-muted-foreground">فترات الزراعة المسجلة لمنطقتك: </span>
+              <span className="text-muted-foreground">{r.general ? "فترات الزراعة العامة المسجلة: " : "فترات الزراعة المسجلة لمنطقتك: "}</span>
               <span className="font-semibold text-brand-700">
                 {r.windows.map((w) => `${formatMonthRange(w.startMonth, w.endMonth)} (${METHOD_LABELS[w.method]})`).join("، ")}
               </span>
@@ -139,7 +145,7 @@ export function RecommendationsView({ crops, compact = false }: { crops: Crop[];
   );
 
   const result = useMemo(
-    () => (location ? recommendCrops({ crops, today: date, zone: location.zone, spaceType: current.space, methodGroup: current.method, alerts }) : null),
+    () => (location ? recommendCrops({ crops, today: date, zone: location.zone, spaceType: current.space, methodGroup: current.method, alerts, country: countryOfLocation(location) }) : null),
     [crops, date, location, current.space, current.method, alerts],
   );
 

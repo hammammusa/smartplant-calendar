@@ -94,3 +94,9 @@ export function normalizeLocation(raw: unknown): SavedLocation | null {
     confirmedAt: new Date(0).toISOString(),
   };
 }
+
+/** ISO country of a saved location (from its region, else the nearest listed town). */
+export function countryOfLocation(loc: Pick<SavedLocation, "regionId" | "latitude" | "longitude"> | null): string | null {
+  if (!loc) return null;
+  return findRegion(loc.regionId)?.countryCode ?? nearestRegion(loc.latitude, loc.longitude).countryCode;
+}

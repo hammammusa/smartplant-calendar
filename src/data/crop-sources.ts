@@ -21,6 +21,8 @@ export interface CropSource {
   /** Arabic note on what the reference covers. */
   covers: string;
   status: "used" | "to_review";
+  /** ISO country the reference describes (its dates apply only there). */
+  country?: string;
   /** Crop slugs the reference is relevant to (empty = general). */
   crops: string[];
 }
@@ -28,14 +30,25 @@ export interface CropSource {
 export const CROP_SOURCES: CropSource[] = [
   {
     id: "moa-ps-okra",
-    title: "دليل المزارع: زراعة البامية",
+    title: "دليل المزارع: زراعة البامية (ملف PDF من صفحتين)",
     publisher: "وزارة الزراعة الفلسطينية",
     url: "https://www.moa.pna.ps/ar/farmers-guides/zraaa-albamy",
-    covers: "مواعيد بدء زراعة البامية المروية في المحافظات الفلسطينية وفي أريحا والأغوار.",
+    covers: "مواعيد زراعة البامية المروية في المحافظات الفلسطينية وفي محافظة أريحا والأغوار.",
     status: "used",
-    readVia:
-      "نصّ الفقرة نقله صاحب المشروع من الدليل الرسمي (لم يكن الموقع متاحًا من بيئة البناء). يُستحسن مطابقته مع الصفحة الأصلية.",
+    country: "PS",
+    readVia: "رُوجع ملف PDF الرسمي المرفق بصفحة الدليل، والمواعيد أدناه منقولة منه بتصرّف.",
     crops: ["okra"],
+  },
+  {
+    id: "wafa-field-crops",
+    title: "مواعيد الزراعة والعناية بالمحاصيل الحقلية",
+    publisher: "مركز المعلومات الوطني الفلسطيني (وفا)",
+    url: "https://info.wafa.ps/pages/details/32226",
+    covers: "مواعيد زراعة القمح والشعير والعدس والبيقيا والكرسنة والحمص والذرة البيضاء في فلسطين، في نص شارح وجدول.",
+    status: "used",
+    country: "PS",
+    readVia: "رُوجع قسم «مواعيد الزراعة والعناية بالمحاصيل الحقلية» (النص الشارح والجدول)، والمواعيد أدناه منقولة منه بتصرّف.",
+    crops: ["wheat", "barley", "lentil", "vetch", "bitter-vetch", "chickpea", "sorghum"],
   },
   {
     id: "narc-okra",

@@ -15,6 +15,7 @@ import { Alert } from "@/components/ui/feedback";
 import {
   CATEGORY_LABELS,
   CLIMATE_ZONE_LABELS,
+  COUNTRY_LABELS,
   DATA_STATUS_LABELS,
   DIFFICULTY_LABELS,
   GUIDE_SECTION_LABELS,
@@ -181,20 +182,25 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {CLIMATE_ZONES.flatMap((zone) => {
+                  {[...(crop.windows.some((w) => w.zone === null) ? [null] : []), ...CLIMATE_ZONES].flatMap((zone) => {
                     const ws = crop.windows.filter((w) => w.zone === zone);
+                    const generalLabel = `عام في ${COUNTRY_LABELS[ws[0]?.countryCode ?? ""] ?? "البلد"} (غير خاص بمنطقة)`;
+                    if (zone === null && ws.length === 0) return [];
                     if (ws.length === 0)
                       return [
                         <tr key={zone}>
-                          <th scope="row" className="px-4 py-3 text-start font-semibold">{CLIMATE_ZONE_LABELS[zone]}</th>
+                          <th scope="row" className="px-4 py-3 text-start font-semibold">{zone ? CLIMATE_ZONE_LABELS[zone] : generalLabel}</th>
                           <td colSpan={4} className="px-4 py-3 text-subtle-foreground">لا تتوفر بيانات موثّقة لهذه المنطقة</td>
                         </tr>,
                       ];
                     return ws.map((w, i) => (
-                      <tr key={`${zone}-${i}`}>
+                      <tr key={`${zone ?? "general"}-${i}`} data-testid={zone ? undefined : "general-window"}>
                         {i === 0 ? (
                           <th scope="row" rowSpan={ws.length} className="px-4 py-3 text-start align-top font-semibold">
-                            {CLIMATE_ZONE_LABELS[zone]}
+                            {zone ? CLIMATE_ZONE_LABELS[zone] : generalLabel}
+                            {zone && w.countryCode ? (
+                              <span className="block text-xs font-normal text-muted-foreground">في {COUNTRY_LABELS[w.countryCode] ?? w.countryCode}</span>
+                            ) : null}
                           </th>
                         ) : null}
                         <td className="px-4 py-3 font-semibold text-brand-700">{formatMonthRange(w.startMonth, w.endMonth)}</td>
@@ -249,7 +255,7 @@ export default async function CropDetailPage({ params }: { params: Promise<{ slu
                       .map((w) => w.sourceDetail)
                       .filter((d, i, all) => all.indexOf(d) === i)
                       .map((d) => (
-                        <blockquote key={d} className="mt-1 border-s-4 border-border-strong ps-3 text-muted-foreground">{d}</blockquote>
+                        <p key={d} className="mt-1 border-s-4 border-border-strong ps-3 text-muted-foreground">{d}</p>
                       ))}
                     {r.readVia ? <span className="mt-1 block text-xs text-subtle-foreground">{r.readVia}</span> : null}
                   </li>

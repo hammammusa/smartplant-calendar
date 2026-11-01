@@ -161,7 +161,7 @@ test.describe("expanded crop catalogue", () => {
     await expect(page.getByTestId("planting-status")).toHaveAttribute("data-status", "now");
     await expect(page.getByTestId("window-source").first()).toContainText("وزارة الزراعة الفلسطينية");
     await expect(page.getByRole("heading", { name: "المصادر" })).toBeVisible();
-    await expect(page.getByText(/تبدأ زراعة البامية المروية في معظم المحافظات الفلسطينية خلال شهر آذار/)).toBeVisible();
+    await expect(page.getByText(/تُزرع البامية المروية في شهر آذار في معظم المحافظات الفلسطينية/).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /أنشئ خطة زراعة البامية/ })).toBeVisible();
 
     await go(page, "/recommendations/");
@@ -185,5 +185,30 @@ test.describe("expanded crop catalogue", () => {
     await expect(page.getByRole("option", { name: /البرقوق/ })).toContainText("قشرتها ملساء");
     await go(page, "/crops/peach/");
     await expect(page.getByTestId("other-meaning")).toContainText("البرقوق");
+  });
+
+  test("wheat shows the general Palestinian date, not a firm local answer", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-11-10T09:00:00+02:00"));
+    await seedLocation(page, HEBRON);
+    await go(page, "/crops/wheat/");
+    const status = page.getByTestId("planting-status");
+    await expect(status).toHaveAttribute("data-status", "now");
+    await expect(status).toHaveAttribute("data-general", "true");
+    await expect(status).toContainText("ضمن الموعد العام للزراعة");
+    await expect(status).not.toContainText("مناسب للزراعة الآن");
+    await expect(page.getByTestId("general-window").first()).toContainText("عام في فلسطين");
+    await expect(page.getByText(/الجدول \(بتصرّف\)/).first()).toBeVisible();
+
+    await go(page, "/recommendations/");
+    await expect(page.getByTestId("rec-wheat")).toContainText("موعد عام لا يخص منطقتك");
+    await expect(page.getByTestId("rec-wheat")).toContainText("ضمن الموعد العام");
+    await expect(page.getByTestId("rec-wheat")).not.toContainText("مناسب الآن");
+  });
+
+  test("Palestinian dates are not shown as documented in Jordan", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-11-10T09:00:00+02:00"));
+    await seedLocation(page, { latitude: 31.95, longitude: 35.93, label: "عمّان", regionId: "jo-amman", zone: "highland", timezone: "Asia/Amman" });
+    await go(page, "/crops/wheat/");
+    await expect(page.getByTestId("planting-status")).toHaveAttribute("data-status", "no_data");
   });
 });
