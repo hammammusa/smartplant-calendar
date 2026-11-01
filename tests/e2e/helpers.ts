@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-export const BASE = process.env.E2E_BASE_PATH ?? "/smartplant-calendar";
+export const BASE = process.env.E2E_BASE_PATH ?? "";
 export const go = (page: Page, path: string) => page.goto(`${BASE}${path}`);
 
 const PNG_1x1 = Buffer.from(

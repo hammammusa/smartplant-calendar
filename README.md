@@ -20,13 +20,13 @@
   - تعتمد على تاريخ اليوم بتوقيت المستخدم، والمنطقة المناخية للموقع المؤكد، ونوع المساحة (ومنها «بيت محمي» مع تنبيه بعدم توفر قواعد خاصة)، وطريقة الزراعة، وتنبيهات الصقيع والحر القريبة.
   - التصنيفات: مناسب الآن / يحتاج حماية / قريبًا / غير مناسب حاليًا.
   - لا درجات ثقة مخترعة.
-- **استضافة خاصة**: Cloudflare Pages خلف Cloudflare Access (بريدك فقط). سير العمل يرفض النشر ما لم يتحقق أولًا من حماية كل النطاقات. التفاصيل والخطوات في **[docs/PRIVATE_HOSTING.md](docs/PRIVATE_HOSTING.md)**.
-- **GitHub Pages**: لم يعد ينشر تلقائيًا (لا عند الدفع ولا يوميًا). يلزم إلغاء النشر العام يدويًا بعد التأكد من عمل الموقع الخاص.
+- **استضافة خاصة (اختيارية لاحقًا)**: Cloudflare Pages خلف Cloudflare Access (بريدك فقط). سير العمل يرفض النشر ما لم يتحقق أولًا من حماية كل النطاقات، ولا يعمل قبل إعداده. التفاصيل في **[docs/PRIVATE_HOSTING.md](docs/PRIVATE_HOSTING.md)**.
+- **GitHub Pages (الاستضافة الحالية، عامة)**: الموقع على `https://smartplantcalendar.github.io/` ويُنشر تلقائيًا مع كل تحديث للفرع `main`.
 
-## النشر السابق: GitHub Pages (موقع ثابت — عام)
+## النشر الحالي: GitHub Pages (موقع ثابت — عام)
 
 الموقع يُبنى كموقع ثابت بالكامل (Next.js Static Export) ويُنشر على:
-**https://hammammusa.github.io/smartplant-calendar/**
+**https://smartplantcalendar.github.io/**
 
 > النسخة السابقة المعتمدة على الخادم (Server Actions وRoute Handlers وProxy) محفوظة كما هي في الفرع **`server-version`** لمن يريد النشر لاحقًا على خادم Node.
 
@@ -60,7 +60,7 @@
 - تعديلات المحتوى من لوحة الإدارة تُحفظ فورًا في قاعدة البيانات وتُستخدم فورًا في مولّد الخطط للمستخدمين المسجلين، لكنها تظهر في **الصفحات العامة** (دليل المحاصيل، الأسئلة الشائعة) بعد إعادة البناء: تلقائيًا كل يوم، أو فورًا من **Actions → Deploy to GitHub Pages → Run workflow**. المحصول الجديد يحصل على صفحة بعد إعادة البناء.
 - لا يمكن ضبط ترويسات HTTP الأمنية على GitHub Pages (مثل CSP)؛ أُضيف `referrer` عبر وسوم HTML.
 - واجهة Open-Meteo المجانية مخصصة للاستخدام غير التجاري. للاستخدام التجاري يلزم مفتاح مدفوع، ويجب ألا يوضع في المتصفح؛ يحتاج حينها وسيطًا صغيرًا (مثل Supabase Edge Function) أو استخدام فرع `server-version`.
-- ملف `robots.txt` موجود داخل `/smartplant-calendar/`، ومحركات البحث تقرأ robots من جذر النطاق فقط؛ خريطة الموقع `sitemap.xml` تعمل ويمكن إرسالها يدويًا إلى Google Search Console.
+- `robots.txt` و`sitemap.xml` في جذر النطاق ويعملان مع محركات البحث، ويمكن إرسال خريطة الموقع إلى Google Search Console.
 
 ---
 
@@ -72,11 +72,11 @@
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 4. أي دمج في `main` يشغّل **Deploy to GitHub Pages** تلقائيًا. يمكنك تشغيله يدويًا من تبويب **Actions**.
-5. بعد نجاحه يظهر الموقع على `https://hammammusa.github.io/smartplant-calendar/` (قد يستغرق أول نشر بضع دقائق).
+5. بعد نجاحه يظهر الموقع على `https://smartplantcalendar.github.io/` (قد يستغرق أول نشر بضع دقائق).
 
 إذا فعّلت Supabase أضف في **Authentication → URL Configuration**:
-- Site URL: `https://hammammusa.github.io/smartplant-calendar/`
-- Redirect URLs: `https://hammammusa.github.io/smartplant-calendar/auth/confirm/` و`http://localhost:3000/auth/confirm/`
+- Site URL: `https://smartplantcalendar.github.io/`
+- Redirect URLs: `https://smartplantcalendar.github.io/auth/confirm/` و`http://localhost:3000/auth/confirm/`
 
 ---
 
@@ -112,8 +112,8 @@ npm run dev                  # http://localhost:3000
 | --- | --- |
 | `npm run dev` | خادم التطوير (دون المسار الفرعي) |
 | `npm run build` | بناء ثابت إلى مجلد `out/` (دون مسار فرعي) |
-| `npm run build:pages` | بناء ثابت بمسار GitHub Pages `/smartplant-calendar` |
-| `npm run serve:pages` | معاينة `out/` محليًا كما يقدمها GitHub Pages على `http://localhost:3200/smartplant-calendar/` |
+| `npm run build:pages` | بناء ثابت لموقع GitHub Pages الرئيسي `https://smartplantcalendar.github.io/` (من جذر النطاق) |
+| `npm run serve:pages` | معاينة `out/` محليًا كما يقدمها GitHub Pages على `http://localhost:3200/` |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | فحص TypeScript |
 | `npm test` | الاختبارات الوحدوية (Vitest) |

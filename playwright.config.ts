@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.E2E_PORT ?? 3200);
-/** Tests run against the static export (`out/`) served like GitHub Pages under this sub-path. */
-export const BASE_PATH = process.env.E2E_BASE_PATH ?? "/smartplant-calendar";
+/** Tests run against the static export (`out/`) served like GitHub Pages (domain root by default). */
+export const BASE_PATH = process.env.E2E_BASE_PATH ?? "";
 
 export default defineConfig({
   testDir: "tests/e2e",

@@ -1,5 +1,5 @@
 // Minimal static server that mimics GitHub Pages for local checks and e2e tests:
-//   - serves ./out under BASE_PATH (default "/smartplant-calendar"),
+//   - serves ./out under BASE_PATH (default: the domain root, like smartplantcalendar.github.io),
 //   - "/dir" redirects to "/dir/" and "/dir/" serves "/dir/index.html",
 //   - unknown paths return out/404.html with status 404.
 // Usage: node scripts/serve-static.mjs [port]
@@ -8,7 +8,7 @@ import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 
 const port = Number(process.argv[2] ?? process.env.PORT ?? 3200);
-const basePath = (process.env.BASE_PATH ?? process.env.NEXT_PUBLIC_BASE_PATH ?? "/smartplant-calendar").replace(/\/$/, "");
+const basePath = (process.env.BASE_PATH ?? process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
 const root = resolve(process.cwd(), "out");
 
 const TYPES = {

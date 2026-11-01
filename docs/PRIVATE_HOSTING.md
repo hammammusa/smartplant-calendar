@@ -78,8 +78,8 @@ GitHub Pages استضافة **عامة**. أي شخص يعرف الرابط يس
 
 ### 8) إلغاء النشر العام على GitHub Pages (بعد التأكد من عمل الموقع الخاص)
 1. **Settings → Pages**: من القائمة بجانب رابط الموقع اختر **Unpublish site**، ثم اجعل **Source** على **None** إن ظهر هذا الخيار.
-2. **Actions → Deploy to GitHub Pages → … → Disable workflow**. هذا السير لم يعد يعمل تلقائيًا بعد هذا التحديث: لا عند الدفع ولا يوميًا، ولا ينشر إلا يدويًا مع كتابة `PUBLISH-PUBLICLY`. ويمكن حذف ملفه نهائيًا لاحقًا.
-3. تأكد أن `https://hammammusa.github.io/smartplant-calendar/` يعرض 404. قد يحتاج ذلك بضع دقائق، وقد تبقى نسخ قديمة في ذاكرة المتصفح أو محركات البحث فترة قصيرة.
+2. **Actions → Deploy to GitHub Pages → … → Disable workflow** (هذا السير ينشر تلقائيًا مع كل تحديث للفرع `main`)، أو احذف ملفه `.github/workflows/deploy-pages.yml`.
+3. تأكد أن `https://smartplantcalendar.github.io/` يعرض 404. قد يحتاج ذلك بضع دقائق، وقد تبقى نسخ قديمة في ذاكرة المتصفح أو محركات البحث فترة قصيرة.
 4. (يُنصح به) اجعل المستودع **Private** من **Settings → General → Danger Zone**، حتى لا يستطيع أحد بناء نسخة من الموقع بنفسه من الكود. النشر إلى Cloudflare يعمل مع المستودع الخاص.
 
 ### 9) إن فعّلت Supabase

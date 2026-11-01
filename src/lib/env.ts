@@ -10,7 +10,7 @@ export const SUPABASE_KEY =
 
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
-/** Sub-path the site is served from ("" locally, "/smartplant-calendar" on GitHub Pages). */
+/** Sub-path the site is served from ("" locally and on https://smartplantcalendar.github.io/). */
 export const BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
 
 /** Full public URL of the site root, including the base path, without trailing slash. */
