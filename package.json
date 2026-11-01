@@ -12,7 +12,7 @@
     "test:e2e": "playwright test",
     "db:seed:generate": "tsx scripts/generate-seed.ts",
     "test:db": "bash tests/db/run.sh",
-    "build:pages": "NEXT_PUBLIC_BASE_PATH=/smartplant-calendar NEXT_PUBLIC_SITE_URL=https://hammammusa.github.io/smartplant-calendar next build",
+    "build:pages": "NEXT_PUBLIC_BASE_PATH= NEXT_PUBLIC_SITE_URL=https://smartplantcalendar.github.io next build",
     "serve:pages": "node scripts/serve-static.mjs 3200",
     "test:scripts": "bash tests/scripts/verify-access.test.sh"
   },

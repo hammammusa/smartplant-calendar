@@ -10,11 +10,11 @@ Arabic-first agricultural planning platform (Palestine / Levant). Next.js 16 App
 2. **RTL everywhere.** Use logical utilities (`ms-`, `me-`, `ps-`, `pe-`, `start-`, `end-`, `text-start`). "Previous" arrows point right (`ChevronRight`), "next" arrows point left. Grids that hold wide content need `grid-cols-1` (minmax(0,1fr)) at the base breakpoint, or phones overflow.
 3. **No fake data.** No invented statistics, testimonials, notifications or saves. Illustrative content must be labelled «مثال توضيحي». Guest data lives in localStorage and the UI must say so (`StorageNotice`).
 4. **Agricultural honesty.** Seed crop data is `dataStatus: "preliminary"`. Never present plans as definitive; unknown growth periods stay `null` (no invented harvest date). Irrigation is "check soil moisture", never inferred from temperature alone.
-5. **Security lives in the database.** The site is a static export on GitHub Pages: the browser talks to Supabase with the public key only. Hiding buttons is not protection — RLS, CHECK constraints and row limits in `supabase/migrations/` are. Every data-access call still does Zod parse → `supabase.auth.getUser()` → query as the user. Never add a service-role key or any secret to `NEXT_PUBLIC_*` variables.
+5. **Security lives in the database.** The site is a static export on GitHub Pages (https://smartplantcalendar.github.io/): the browser talks to Supabase with the public key only. Hiding buttons is not protection — RLS, CHECK constraints and row limits in `supabase/migrations/` are. Every data-access call still does Zod parse → `supabase.auth.getUser()` → query as the user. Never add a service-role key or any secret to `NEXT_PUBLIC_*` variables.
 6. **Static export only.** No Server Actions, Route Handlers, Proxy/middleware, `cookies()`, ISR (`revalidate`), `dynamic = "force-dynamic"`, or dynamic routes without `generateStaticParams` + `dynamicParams = false`. Pass ids via `?query` on a static page instead (see `/admin/crops/edit`). The server-rendered version lives on the `server-version` branch.
-7. **Base path.** The site is served under `NEXT_PUBLIC_BASE_PATH` (empty on Cloudflare Pages; `/smartplant-calendar` for the old GitHub Pages build). `<Link>` and `useRouter` add it automatically; for anything else (auth email redirects, manifest, plain URLs) use `appUrl()` / `absoluteUrl()` from `src/lib/env.ts`. Anything date-dependent must be computed in the browser (`useAppData().today`), never at build time.
+7. **Base path.** The site is served under `NEXT_PUBLIC_BASE_PATH` (empty: the site is the organization site https://smartplantcalendar.github.io/). `<Link>` and `useRouter` add it automatically; for anything else (auth email redirects, manifest, plain URLs) use `appUrl()` / `absoluteUrl()` from `src/lib/env.ts`. Anything date-dependent must be computed in the browser (`useAppData().today`), never at build time.
 8. **Location privacy.** GPS/map coordinates (`SavedLocation.source` gps|map) must not reach any external service (OSM tiles, Nominatim, Open-Meteo) without `externalConsent`; use `coordsForServices()` (rounded ~1 km for weather). Nominatim: explicit submit only (never autocomplete), ≤1 req/s, cached, attributed «© مساهمو OpenStreetMap». Never log coordinates or put them in URLs of our own pages.
-9. **Private hosting.** Production is Cloudflare Pages behind Cloudflare Access (docs/PRIVATE_HOSTING.md). The deploy workflow must verify Access on every hostname before uploading; never add a step that deploys without that check, and never re-enable automatic GitHub Pages publishing.
+9. **Hosting.** Production is the public GitHub Pages organization site https://smartplantcalendar.github.io/, deployed by `.github/workflows/deploy-pages.yml` on every push to `main` (Pages source: GitHub Actions). Cloudflare Pages + Access (docs/PRIVATE_HOSTING.md) is an optional private alternative; its workflow must keep verifying Access on every hostname before uploading.
 
 ## Where things live
 
@@ -41,6 +41,6 @@ Arabic-first agricultural planning platform (Palestine / Levant). Next.js 16 App
 ```bash
 npm run lint && npm run typecheck && npm test
 npm run test:db          # RLS tests on a throwaway PostgreSQL
-npm run build:pages && npm run test:e2e   # e2e serves out/ like GitHub Pages
+npm run build:pages && npm run test:e2e   # e2e serves out/ like GitHub Pages (domain root)
 ```
 Do not claim a check passed unless you ran it.

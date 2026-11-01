@@ -1,18 +1,15 @@
-name: Deploy to GitHub Pages (PUBLIC — disabled)
+name: Deploy to GitHub Pages
 
-# GitHub Pages is public: anyone with the link can open the site. The project is
-# moving to private hosting (Cloudflare Pages + Access, see
-# docs/PRIVATE_HOSTING.md), so this workflow no longer runs on push or on a
-# schedule. It can only be started by hand, and only after typing the
-# confirmation below. Delete this file once the private site is verified.
+# Public site: https://smartplantcalendar.github.io/
+# The repository is the organization site (smartplantcalendar.github.io), so the
+# site is served from the domain root: NEXT_PUBLIC_BASE_PATH must stay empty.
+# Deploys automatically on every push to main, and can be run by hand.
+# Requires Settings → Pages → Source = "GitHub Actions".
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      confirm_public:
-        description: 'Type PUBLISH-PUBLICLY to publish a PUBLIC copy on GitHub Pages'
-        required: true
-        default: ""
 
 permissions:
   contents: read
@@ -25,7 +22,6 @@ concurrency:
 
 jobs:
   build:
-    if: github.event.inputs.confirm_public == 'PUBLISH-PUBLICLY'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,19 +30,23 @@ jobs:
           node-version: 22
           cache: npm
       - name: Configure Pages
-        id: pages
         uses: actions/configure-pages@v5
       - run: npm ci
       - name: Build static site
         run: npx next build
         env:
-          # e.g. "/smartplant-calendar" for https://<user>.github.io/smartplant-calendar/
-          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
-          NEXT_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}
+          NEXT_PUBLIC_BASE_PATH: ""
+          NEXT_PUBLIC_SITE_URL: https://smartplantcalendar.github.io
           # Optional. Public values only (Settings → Secrets and variables → Actions → Variables).
           # The publishable/anon key is safe to expose; never put a service_role key here.
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      - name: Check the export is served from the domain root
+        run: |
+          test -f out/index.html && test -f out/404.html
+          test -f out/location/index.html && test -f out/recommendations/index.html
+          grep -q '"/_next/static/' out/index.html
+          ! grep -q '/smartplant-calendar/' out/index.html
       - uses: actions/upload-pages-artifact@v4
         with:
           path: out
